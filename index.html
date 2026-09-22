@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>心晴日记 · 情绪日记与自我关怀</title>
+<meta name="description" content="零门槛记录情绪变化，分析触发因素，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-emoji">🌤️</span>
+      <span class="brand-name">心晴日记</span>
+    </div>
+    <div class="topbar-sub" id="todayStatus">今天还没有记录心情</div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ 首页总览 ============ -->
+    <section class="view" id="view-home">
+      <div class="card hero-card">
+        <h2>此刻，你感觉怎么样？</h2>
+        <p class="muted">花 10 秒记录下来，比憋在心里更轻松一点。</p>
+        <button class="btn btn-primary btn-block" data-nav="log">立即记录心情</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <h3>近 7 天情绪走势</h3>
+        </div>
+        <div id="homeTrend" class="chart-wrap"></div>
+      </div>
+
+      <div class="card" id="homeStreakCard">
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-num" id="statStreak">0</div>
+            <div class="stat-label">连续记录天数</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="statTotal">0</div>
+            <div class="stat-label">累计记录次数</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="statAvg">–</div>
+            <div class="stat-label">近7天平均情绪</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>为你推荐</h3>
+        <p class="muted small">根据你最近的情绪状态生成，点开「自我关怀」看更多</p>
+        <div id="homeRecommend" class="recommend-preview"></div>
+        <button class="btn btn-ghost btn-block" data-nav="care">查看全部自我关怀方案</button>
+      </div>
+    </section>
+
+    <!-- ============ 记录情绪 ============ -->
+    <section class="view" id="view-log">
+      <div class="card">
+        <h2>记录此刻的心情</h2>
+
+        <div class="field">
+          <label>你现在感觉…</label>
+          <div class="mood-picker" id="moodPicker">
+            <button type="button" class="mood-opt" data-mood="5"><span class="mood-emoji">😄</span><span>很好</span></button>
+            <button type="button" class="mood-opt" data-mood="4"><span class="mood-emoji">🙂</span><span>不错</span></button>
+            <button type="button" class="mood-opt" data-mood="3"><span class="mood-emoji">😐</span><span>一般</span></button>
+            <button type="button" class="mood-opt" data-mood="2"><span class="mood-emoji">😔</span><span>低落</span></button>
+            <button type="button" class="mood-opt" data-mood="1"><span class="mood-emoji">😣</span><span>很糟</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="intensity">情绪强度 <span id="intensityVal" class="muted">3</span>/5</label>
+          <input type="range" id="intensity" min="1" max="5" value="3" step="1">
+        </div>
+
+        <div class="field">
+          <label>可能的触发因素（可多选）</label>
+          <div class="tag-picker" id="triggerPicker">
+            <button type="button" class="tag-opt" data-tag="工作学业">工作/学业</button>
+            <button type="button" class="tag-opt" data-tag="人际关系">人际关系</button>
+            <button type="button" class="tag-opt" data-tag="家庭">家庭</button>
+            <button type="button" class="tag-opt" data-tag="健康">健康</button>
+            <button type="button" class="tag-opt" data-tag="财务">财务</button>
+            <button type="button" class="tag-opt" data-tag="睡眠">睡眠</button>
+            <button type="button" class="tag-opt" data-tag="社交媒体">社交媒体</button>
+            <button type="button" class="tag-opt" data-tag="天气">天气</button>
+            <button type="button" class="tag-opt" data-tag="独处">独处</button>
+            <button type="button" class="tag-opt" data-tag="其他">其他</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="note">想说点什么（选填）</label>
+          <textarea id="note" rows="3" placeholder="发生了什么？此刻脑子里在想什么？"></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="saveEntryBtn">保存记录</button>
+        <div id="saveConfirm" class="save-confirm" hidden></div>
+      </div>
+    </section>
+
+    <!-- ============ 情绪洞察 ============ -->
+    <section class="view" id="view-insight">
+      <div class="card">
+        <div class="card-title-row">
+          <h3>情绪趋势</h3>
+          <div class="segmented" id="trendRange">
+            <button class="seg-opt active" data-range="7">7天</button>
+            <button class="seg-opt" data-range="30">30天</button>
+          </div>
+        </div>
+        <div id="insightTrend" class="chart-wrap"></div>
+      </div>
+
+      <div class="card">
+        <h3>情绪日历</h3>
+        <p class="muted small">最近 35 天，颜色越深代表当天情绪记录越正向</p>
+        <div id="moodCalendar" class="calendar-grid"></div>
+        <div class="calendar-legend">
+          <span>低落</span>
+          <span class="legend-swatch l1"></span>
+          <span class="legend-swatch l2"></span>
+          <span class="legend-swatch l3"></span>
+          <span class="legend-swatch l4"></span>
+          <span class="legend-swatch l5"></span>
+          <span>愉悦</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>触发因素分析</h3>
+        <p class="muted small">按出现次数排序，条形颜色代表该因素出现时的平均情绪</p>
+        <div id="triggerAnalysis"></div>
+      </div>
+    </section>
+
+    <!-- ============ 自我关怀 ============ -->
+    <section class="view" id="view-care">
+      <div class="card">
+        <h2>自我关怀方案</h2>
+        <div id="careIntro" class="muted small"></div>
+      </div>
+
+      <div class="card">
+        <h3>🫧 呼吸练习</h3>
+        <p class="muted small">跟随圆圈的扩张与收缩调整呼吸，帮助神经系统平静下来</p>
+        <div class="breathing-wrap">
+          <div class="breathing-circle" id="breathCircle"><span id="breathLabel">开始</span></div>
+        </div>
+        <div class="segmented breath-modes" id="breathModes">
+          <button class="seg-opt active" data-mode="box">箱式呼吸 4-4-4-4</button>
+          <button class="seg-opt" data-mode="478">4-7-8 放松呼吸</button>
+        </div>
+        <button class="btn btn-primary btn-block" id="breathToggle">开始练习</button>
+      </div>
+
+      <div class="card">
+        <h3>🧘 正念冥想</h3>
+        <div class="care-list" id="meditationList"></div>
+      </div>
+
+      <div class="card">
+        <h3>🎵 音乐推荐</h3>
+        <div class="care-list" id="musicList"></div>
+      </div>
+
+      <div class="card">
+        <h3>🏃 运动建议</h3>
+        <div class="care-list" id="exerciseList"></div>
+      </div>
+    </section>
+
+    <!-- ============ 历史记录 ============ -->
+    <section class="view" id="view-history">
+      <div class="card">
+        <div class="card-title-row">
+          <h3>历史记录</h3>
+        </div>
+        <input type="text" id="historySearch" class="text-input" placeholder="搜索笔记内容或标签…">
+        <div id="historyList" class="history-list"></div>
+      </div>
+
+      <div class="card">
+        <h3>数据与隐私</h3>
+        <p class="muted small">所有记录仅保存在你当前浏览器的本地存储（localStorage）中，不会上传到任何服务器。清除浏览器数据会导致记录丢失，建议定期导出备份。</p>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="exportBtn">导出 JSON</button>
+          <button class="btn btn-danger-ghost" id="clearBtn">清空所有数据</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-item active" data-nav="home"><span class="tab-icon">🏠</span><span>首页</span></button>
+    <button class="tab-item" data-nav="log"><span class="tab-icon">✍️</span><span>记录</span></button>
+    <button class="tab-item" data-nav="insight"><span class="tab-icon">📊</span><span>洞察</span></button>
+    <button class="tab-item" data-nav="care"><span class="tab-icon">💆</span><span>关怀</span></button>
+    <button class="tab-item" data-nav="history"><span class="tab-icon">📖</span><span>历史</span></button>
+  </nav>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
