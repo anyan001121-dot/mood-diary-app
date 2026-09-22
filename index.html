@@ -56,10 +56,14 @@
           <div class="garden-timeline" id="gardenTimeline"></div>
         </div>
 
-        <div class="garden-prompt" id="gardenPrompt">此刻，你感觉怎么样？点一下就好</div>
+        <div class="garden-prompt" id="gardenPrompt">嗨，这一刻的你，感觉怎么样？点一下就好</div>
 
         <div class="garden-progress" id="gardenProgress">
-          <div class="garden-progress-bar"><div class="garden-progress-fill" id="gardenProgressFill" style="width:0%"></div></div>
+          <div class="garden-plot-nav-row">
+            <button type="button" class="plot-nav-btn" id="plotPrevBtn" title="上一片花园" disabled>‹</button>
+            <div class="garden-progress-bar"><div class="garden-progress-fill" id="gardenProgressFill" style="width:0%"></div></div>
+            <button type="button" class="plot-nav-btn" id="plotNextBtn" title="回到今天" hidden>›</button>
+          </div>
           <div class="garden-progress-text" id="gardenProgressText"></div>
         </div>
 

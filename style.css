@@ -227,6 +227,7 @@ main {
   background-size: cover;
   background-position: center bottom;
   overflow: hidden;
+  transition: filter 0.6s ease;
 }
 
 .ambient {
@@ -359,7 +360,29 @@ main {
   padding: 8px 16px 0;
   transition: transform 0.3s ease;
 }
+.garden-plot-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plot-nav-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plot-nav-btn:disabled { opacity: 0.3; cursor: default; }
 .garden-progress-bar {
+  flex: 1;
   background: var(--bg);
   border-radius: 999px;
   height: 8px;

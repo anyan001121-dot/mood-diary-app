@@ -268,8 +268,8 @@
     const todayKey = dayKey(Date.now());
     const hasToday = entries.some(e => dayKey(e.ts) === todayKey);
     document.getElementById('todayStatus').textContent = hasToday
-      ? '今天已经记录过心情啦，可以随时补充新的一次'
-      : '今天还没有记录心情，花点时间关照一下自己吧';
+      ? '今天已经记录过啦，随时都能再说说现在的感觉'
+      : '今天还没有记录心情，来看看你的花园吧';
 
     renderGarden();
     const days7 = dailyAverages(7);
@@ -304,58 +304,95 @@
   }
 
   // ---------- garden ----------
-  // 每条记录都在花园里种下一朵新花（而不是按天覆盖），每种满 GARDEN_MILESTONE 朵算种满一片花园
+  // 每条记录都在花园里种下一朵新花（而不是按天覆盖）。每种满 GARDEN_MILESTONE 朵，
+  // 这片花园就算种满了，会开启一片新的花园和新背景；旧花园可以用箭头往回翻看。
   const GARDEN_MILESTONE = 12;
-  const GARDEN_RENDER_CAP = 80; // 只渲染最近的N朵，避免记录很多之后时间轴过长影响性能
+
+  // 目前只有一张背景图；之后每补一张，就往数组里加一项，新花园会自动用上新背景。
+  // 数组用完的花园会循环使用一组色调滤镜，让"新的一片"看起来依然有区别。
+  const GARDEN_BACKGROUNDS = ['assets/bg-day.jpg'];
+  const GARDEN_TINTS = [
+    'none',
+    'hue-rotate(25deg) saturate(1.12)',
+    'hue-rotate(-22deg) brightness(1.05)',
+    'hue-rotate(60deg) saturate(0.92)',
+    'sepia(0.22) hue-rotate(-8deg) saturate(1.15)',
+  ];
+
+  let gardenViewOffset = 0; // 0 = 当前花园；1 = 往回翻一片，以此类推
+
+  function currentPlotNumber(total) {
+    return total === 0 ? 1 : Math.ceil(total / GARDEN_MILESTONE);
+  }
+
+  function applyGardenBackground(plotNumber) {
+    const scene = document.getElementById('gardenScene');
+    const bgIdx = Math.min(plotNumber - 1, GARDEN_BACKGROUNDS.length - 1);
+    scene.style.backgroundImage = `url('${GARDEN_BACKGROUNDS[bgIdx]}')`;
+    scene.style.filter = GARDEN_TINTS[(plotNumber - 1) % GARDEN_TINTS.length];
+  }
 
   function renderGarden() {
     const entries = loadEntries().slice().sort((a, b) => a.ts - b.ts);
     const total = entries.length;
-    const el = document.getElementById('gardenTimeline');
+    const current = currentPlotNumber(total);
+    gardenViewOffset = Math.min(gardenViewOffset, Math.max(0, current - 1));
+    const displayedPlot = current - gardenViewOffset;
+    const isCurrentPlot = gardenViewOffset === 0;
 
-    if (!total) {
-      el.innerHTML = '<div class="garden-empty-hint">这里还没有花，点下面的花苞种下第一朵</div>';
+    const startIdx = (displayedPlot - 1) * GARDEN_MILESTONE;
+    const plotEntries = entries.slice(startIdx, startIdx + GARDEN_MILESTONE);
+
+    applyGardenBackground(displayedPlot);
+
+    const el = document.getElementById('gardenTimeline');
+    if (!plotEntries.length) {
+      el.innerHTML = '<div class="garden-empty-hint">种下你的第一朵花吧～这片花园会因为你，一点一点长满</div>';
     } else {
-      const recent = entries.slice(-GARDEN_RENDER_CAP);
-      const lastId = entries[total - 1].id;
-      el.innerHTML = recent.map(e => {
+      const lastEntryId = entries[total - 1].id;
+      el.innerHTML = plotEntries.map(e => {
         const classes = ['day-slot'];
-        if (e.id === lastId) classes.push('today-slot');
+        if (isCurrentPlot && e.id === lastEntryId) classes.push('today-slot');
         return `<button type="button" class="${classes.join(' ')}" data-entry-id="${e.id}" title="${fmtShort(e.ts)} · ${MOOD_META[e.mood].label}"><img src="${spriteFor(e)}" alt="${MOOD_META[e.mood].label}"></button>`;
       }).join('');
-      el.scrollLeft = el.scrollWidth;
+      if (isCurrentPlot) el.scrollLeft = el.scrollWidth;
     }
 
     const hasToday = entries.some(e => dayKey(e.ts) === dayKey(Date.now()));
-    document.getElementById('gardenPrompt').textContent = hasToday
-      ? '今天已经记录过了，还想再说说现在的感觉吗？'
-      : '此刻，你感觉怎么样？点一下就好';
+    document.getElementById('gardenPrompt').textContent = !isCurrentPlot
+      ? '正在回顾这片花园，点右边的箭头回到今天'
+      : (hasToday ? '今天已经和你一起记录过啦，想再聊聊现在的心情吗？' : '嗨，这一刻的你，感觉怎么样？点一下就好');
 
-    renderGardenProgress(total);
+    renderGardenProgress(total, displayedPlot, current);
+    document.getElementById('plotPrevBtn').disabled = displayedPlot <= 1;
+    document.getElementById('plotNextBtn').hidden = isCurrentPlot;
   }
 
-  function renderGardenProgress(total) {
-    const filledInPlot = total === 0 ? 0 : (total % GARDEN_MILESTONE === 0 ? GARDEN_MILESTONE : total % GARDEN_MILESTONE);
+  function renderGardenProgress(total, displayedPlot, current) {
+    displayedPlot = displayedPlot || currentPlotNumber(total);
+    current = current || displayedPlot;
+    const filledInPlot = displayedPlot < current
+      ? GARDEN_MILESTONE
+      : (total === 0 ? 0 : (total % GARDEN_MILESTONE === 0 ? GARDEN_MILESTONE : total % GARDEN_MILESTONE));
     const remaining = GARDEN_MILESTONE - filledInPlot;
-    const plotNumber = total === 0 ? 1 : Math.ceil(total / GARDEN_MILESTONE);
 
     document.getElementById('gardenProgressFill').style.width = (filledInPlot / GARDEN_MILESTONE * 100) + '%';
     document.getElementById('gardenProgressText').textContent = total === 0
-      ? '种下第一朵，开始这片花园'
+      ? `第 ${displayedPlot} 片花园 · 种下第一朵开始吧`
       : (remaining === 0
-          ? `第 ${plotNumber} 片花园种满啦`
-          : `第 ${plotNumber} 片花园 · 已种 ${filledInPlot}/${GARDEN_MILESTONE} 朵 · 再种 ${remaining} 朵集满`);
+          ? `第 ${displayedPlot} 片花园种满啦`
+          : `第 ${displayedPlot} 片花园 · 已种 ${filledInPlot}/${GARDEN_MILESTONE} 朵 · 再种 ${remaining} 朵集满`);
   }
 
   function celebrateMilestone() {
     const el = document.getElementById('gardenProgress');
     const textEl = document.getElementById('gardenProgressText');
     el.classList.add('celebrate');
-    textEl.textContent = '这片花园种满啦，新的一片已经开始';
+    textEl.textContent = '这片花园被你种满啦！新的花园已经悄悄准备好，等你来种下第一朵';
     setTimeout(() => {
       el.classList.remove('celebrate');
       renderGardenProgress(loadEntries().length);
-    }, 3200);
+    }, 3400);
   }
 
   document.getElementById('gardenTimeline').addEventListener('click', (e) => {
@@ -364,11 +401,21 @@
     openEntryEditor(slot.dataset.entryId);
   });
 
+  document.getElementById('plotPrevBtn').addEventListener('click', () => {
+    gardenViewOffset++;
+    renderGarden();
+  });
+  document.getElementById('plotNextBtn').addEventListener('click', () => {
+    gardenViewOffset = 0;
+    renderGarden();
+  });
+
   function quickLogMood(score) {
     const entry = { id: uid(), ts: Date.now(), mood: score, intensity: 3, tags: [], note: '' };
     addEntry(entry);
     lastQuickEntryId = entry.id;
     const total = loadEntries().length;
+    gardenViewOffset = 0;
 
     renderHome();
 
