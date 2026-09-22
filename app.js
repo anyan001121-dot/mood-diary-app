@@ -9,6 +9,20 @@
     2: { emoji: '😔', label: '低落', color: 'var(--mood-2)' },
     1: { emoji: '😣', label: '很糟', color: 'var(--mood-1)' },
   };
+  // stage 1 = intensity 1-3, stage 2 = intensity 4-5
+  const MOOD_SPRITES = {
+    5: ['assets/flower-great-bud.png', 'assets/flower-great-bloom.png'],
+    4: ['assets/flower-good-bud.png', 'assets/flower-good-bloom.png'],
+    3: ['assets/flower-okay-bud.png', 'assets/flower-okay-half.png'],
+    2: ['assets/flower-low-1.png', 'assets/flower-low-2.png'],
+    1: ['assets/flower-awful-1.png', 'assets/flower-awful-2.png'],
+  };
+  function spriteFor(entry) {
+    const stage = entry.intensity >= 4 ? 1 : 0;
+    return MOOD_SPRITES[entry.mood][stage];
+  }
+  let editingEntryId = null;
+  let lastQuickEntryId = null;
 
   // ---------- storage ----------
   function loadEntries() {
@@ -99,23 +113,7 @@
     document.getElementById('intensityVal').textContent = intensityInput.value;
   });
 
-  document.getElementById('saveEntryBtn').addEventListener('click', () => {
-    if (!selectedMood) {
-      document.getElementById('moodPicker').style.outline = '2px solid var(--danger)';
-      setTimeout(() => { document.getElementById('moodPicker').style.outline = ''; }, 900);
-      return;
-    }
-    const entry = {
-      id: uid(),
-      ts: Date.now(),
-      mood: selectedMood,
-      intensity: Number(intensityInput.value),
-      tags: Array.from(selectedTags),
-      note: document.getElementById('note').value.trim(),
-    };
-    addEntry(entry);
-
-    // reset form
+  function resetLogForm() {
     selectedMood = null;
     selectedTags.clear();
     document.querySelectorAll('.mood-opt').forEach(el => el.classList.remove('selected'));
@@ -123,6 +121,66 @@
     intensityInput.value = 3;
     document.getElementById('intensityVal').textContent = '3';
     document.getElementById('note').value = '';
+  }
+
+  function openEntryEditor(entryId) {
+    const entry = loadEntries().find(e => e.id === entryId);
+    if (!entry) return;
+    editingEntryId = entryId;
+    selectedMood = entry.mood;
+    selectedTags.clear();
+    (entry.tags || []).forEach(t => selectedTags.add(t));
+    document.querySelectorAll('.mood-opt').forEach(el => el.classList.toggle('selected', Number(el.dataset.mood) === entry.mood));
+    document.querySelectorAll('.tag-opt').forEach(el => el.classList.toggle('selected', selectedTags.has(el.dataset.tag)));
+    intensityInput.value = entry.intensity;
+    document.getElementById('intensityVal').textContent = entry.intensity;
+    document.getElementById('note').value = entry.note || '';
+    document.getElementById('logTitle').textContent = '补充细节';
+    document.getElementById('logDeleteBtn').hidden = false;
+    showView('log');
+  }
+
+  document.getElementById('logCancelBtn').addEventListener('click', () => {
+    editingEntryId = null;
+    resetLogForm();
+    showView('home');
+  });
+
+  document.getElementById('logDeleteBtn').addEventListener('click', () => {
+    if (!editingEntryId) return;
+    if (confirm('确定删除这条记录吗？')) {
+      deleteEntry(editingEntryId);
+      editingEntryId = null;
+      resetLogForm();
+      showView('home');
+    }
+  });
+
+  document.getElementById('saveEntryBtn').addEventListener('click', () => {
+    if (!selectedMood) {
+      document.getElementById('moodPicker').style.outline = '2px solid var(--danger)';
+      setTimeout(() => { document.getElementById('moodPicker').style.outline = ''; }, 900);
+      return;
+    }
+    const fields = {
+      mood: selectedMood,
+      intensity: Number(intensityInput.value),
+      tags: Array.from(selectedTags),
+      note: document.getElementById('note').value.trim(),
+    };
+
+    if (editingEntryId) {
+      const entries = loadEntries();
+      const idx = entries.findIndex(e => e.id === editingEntryId);
+      if (idx !== -1) Object.assign(entries[idx], fields);
+      saveEntries(entries);
+      editingEntryId = null;
+    } else {
+      addEntry({ id: uid(), ts: Date.now(), ...fields });
+    }
+
+    resetLogForm();
+    document.getElementById('logDeleteBtn').hidden = true;
 
     const confirmEl = document.getElementById('saveConfirm');
     confirmEl.hidden = false;
@@ -213,8 +271,8 @@
       ? '今天已经记录过心情啦，可以随时补充新的一次'
       : '今天还没有记录心情，花点时间关照一下自己吧';
 
+    renderGarden();
     const days7 = dailyAverages(7);
-    document.getElementById('homeTrend').innerHTML = buildTrendSVG(days7);
 
     // streak
     let streak = 0;
@@ -244,6 +302,78 @@
     if (!entries.length) return null;
     return entries.reduce((s, e) => s + e.mood, 0) / entries.length;
   }
+
+  // ---------- garden ----------
+  const GARDEN_DAYS = 14;
+
+  function renderGarden() {
+    const entries = loadEntries();
+    const today = startOfDay(Date.now());
+    const el = document.getElementById('gardenTimeline');
+    let html = '';
+    for (let i = GARDEN_DAYS - 1; i >= 0; i--) {
+      const dayStart = today - i * 86400000;
+      const key = dayKey(dayStart);
+      const dayEntries = entries.filter(e => dayKey(e.ts) === key).sort((a, b) => b.ts - a.ts);
+      const latest = dayEntries[0];
+      const isToday = i === 0;
+      const classes = ['day-slot'];
+      if (isToday) classes.push('today-slot');
+      if (!latest) classes.push('empty-slot');
+      if (latest) {
+        html += `<button type="button" class="${classes.join(' ')}" data-entry-id="${latest.id}" title="${fmtShort(dayStart)}"><img src="${spriteFor(latest)}" alt="${MOOD_META[latest.mood].label}"></button>`;
+      } else {
+        html += `<div class="${classes.join(' ')}" title="${fmtShort(dayStart)}"></div>`;
+      }
+    }
+    el.innerHTML = html;
+    el.scrollLeft = el.scrollWidth;
+
+    const hasToday = entries.some(e => dayKey(e.ts) === dayKey(Date.now()));
+    document.getElementById('gardenPrompt').textContent = hasToday
+      ? '今天已经记录过了，还想再说说现在的感觉吗？'
+      : '此刻，你感觉怎么样？点一下就好';
+  }
+
+  document.getElementById('gardenTimeline').addEventListener('click', (e) => {
+    const slot = e.target.closest('[data-entry-id]');
+    if (!slot) return;
+    openEntryEditor(slot.dataset.entryId);
+  });
+
+  function quickLogMood(score) {
+    const entry = { id: uid(), ts: Date.now(), mood: score, intensity: 3, tags: [], note: '' };
+    addEntry(entry);
+    lastQuickEntryId = entry.id;
+
+    renderHome();
+
+    const todaySlot = document.querySelector('.day-slot.today-slot');
+    if (todaySlot) {
+      todaySlot.classList.add('just-grown');
+      setTimeout(() => todaySlot.classList.remove('just-grown'), 650);
+    }
+    const bubble = document.getElementById('detailBubble');
+    document.getElementById('detailBubbleText').textContent = `记下了 ${MOOD_META[score].emoji} 感谢你花时间关照自己`;
+    bubble.hidden = false;
+    clearTimeout(quickLogMood._hideTimer);
+    quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 6000);
+  }
+
+  document.getElementById('quickMoodRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-mood-btn');
+    if (!btn) return;
+    quickLogMood(Number(btn.dataset.mood));
+  });
+
+  document.getElementById('detailBubbleBtn').addEventListener('click', () => {
+    document.getElementById('detailBubble').hidden = true;
+    if (lastQuickEntryId) openEntryEditor(lastQuickEntryId);
+  });
+
+  document.getElementById('breathOrbFab').addEventListener('click', () => {
+    showView('care');
+  });
 
   // ---------- insight ----------
   let trendRange = 7;

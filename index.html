@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>心晴日记 · 情绪日记与自我关怀</title>
 <meta name="description" content="零门槛记录情绪变化，分析触发因素，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,19 +23,35 @@
 
   <main id="main">
 
-    <!-- ============ 首页总览 ============ -->
+    <!-- ============ 首页：情绪花园 ============ -->
     <section class="view" id="view-home">
-      <div class="card hero-card">
-        <h2>此刻，你感觉怎么样？</h2>
-        <p class="muted">花 10 秒记录下来，比憋在心里更轻松一点。</p>
-        <button class="btn btn-primary btn-block" data-nav="log">立即记录心情</button>
-      </div>
 
-      <div class="card">
-        <div class="card-title-row">
-          <h3>近 7 天情绪走势</h3>
+      <div class="garden-card">
+        <div class="garden-scene" id="gardenScene" style="background-image:url('assets/bg-day.jpg')">
+          <img class="ambient sprite-butterfly" src="assets/sprite-butterfly.png" alt="">
+          <img class="ambient sprite-firefly" src="assets/sprite-firefly.png" alt="">
+
+          <button class="breath-orb-fab" id="breathOrbFab" title="呼吸练习">
+            <img src="assets/breath-orb.png" alt="呼吸练习">
+          </button>
+
+          <div class="garden-timeline" id="gardenTimeline"></div>
         </div>
-        <div id="homeTrend" class="chart-wrap"></div>
+
+        <div class="garden-prompt" id="gardenPrompt">此刻，你感觉怎么样？点一下就好</div>
+
+        <div class="quick-mood-row" id="quickMoodRow">
+          <button type="button" class="quick-mood-btn" data-mood="5"><img src="assets/flower-great-bud.png" alt="很好"><span>很好</span></button>
+          <button type="button" class="quick-mood-btn" data-mood="4"><img src="assets/flower-good-bud.png" alt="不错"><span>不错</span></button>
+          <button type="button" class="quick-mood-btn" data-mood="3"><img src="assets/flower-okay-bud.png" alt="一般"><span>一般</span></button>
+          <button type="button" class="quick-mood-btn" data-mood="2"><img src="assets/flower-low-1.png" alt="低落"><span>低落</span></button>
+          <button type="button" class="quick-mood-btn" data-mood="1"><img src="assets/flower-awful-1.png" alt="很糟"><span>很糟</span></button>
+        </div>
+
+        <div class="detail-bubble" id="detailBubble" hidden>
+          <span id="detailBubbleText">记下了 🌱</span>
+          <button type="button" id="detailBubbleBtn">补充一点细节</button>
+        </div>
       </div>
 
       <div class="card" id="homeStreakCard">
@@ -56,16 +73,19 @@
 
       <div class="card">
         <h3>为你推荐</h3>
-        <p class="muted small">根据你最近的情绪状态生成，点开「自我关怀」看更多</p>
+        <p class="muted small">根据你最近的情绪状态生成，点开「关怀」看更多</p>
         <div id="homeRecommend" class="recommend-preview"></div>
         <button class="btn btn-ghost btn-block" data-nav="care">查看全部自我关怀方案</button>
       </div>
     </section>
 
-    <!-- ============ 记录情绪 ============ -->
+    <!-- ============ 记录详情（补充细节 / 编辑） ============ -->
     <section class="view" id="view-log">
       <div class="card">
-        <h2>记录此刻的心情</h2>
+        <div class="card-title-row">
+          <h2 id="logTitle" style="margin:0">补充细节</h2>
+          <button class="btn-ghost" id="logCancelBtn" style="border:none;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer">返回花园</button>
+        </div>
 
         <div class="field">
           <label>你现在感觉…</label>
@@ -105,6 +125,7 @@
         </div>
 
         <button class="btn btn-primary btn-block" id="saveEntryBtn">保存记录</button>
+        <button class="btn btn-danger-ghost btn-block" id="logDeleteBtn" hidden>删除这条记录</button>
         <div id="saveConfirm" class="save-confirm" hidden></div>
       </div>
     </section>
@@ -203,8 +224,7 @@
   </main>
 
   <nav class="tabbar">
-    <button class="tab-item active" data-nav="home"><span class="tab-icon">🏠</span><span>首页</span></button>
-    <button class="tab-item" data-nav="log"><span class="tab-icon">✍️</span><span>记录</span></button>
+    <button class="tab-item active" data-nav="home"><span class="tab-icon">🌷</span><span>花园</span></button>
     <button class="tab-item" data-nav="insight"><span class="tab-icon">📊</span><span>洞察</span></button>
     <button class="tab-item" data-nav="care"><span class="tab-icon">💆</span><span>关怀</span></button>
     <button class="tab-item" data-nav="history"><span class="tab-icon">📖</span><span>历史</span></button>
