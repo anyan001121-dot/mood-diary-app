@@ -14,11 +14,30 @@
 <div class="app">
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-emoji">🌤️</span>
-      <span class="brand-name">心晴日记</span>
+    <div class="topbar-row">
+      <div class="brand">
+        <span class="brand-emoji">🌤️</span>
+        <span class="brand-name">心晴日记</span>
+      </div>
+      <button class="music-btn" id="musicBtn" title="背景音乐">
+        <span id="musicBtnIcon">🎵</span>
+      </button>
     </div>
     <div class="topbar-sub" id="todayStatus">今天还没有记录心情</div>
+
+    <div class="music-panel" id="musicPanel" hidden>
+      <p class="muted small" style="margin:0 0 8px">治愈系背景音乐，可随时切换或关闭</p>
+      <div class="music-track-row">
+        <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光序曲</button>
+        <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声白噪音</button>
+        <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵回响</button>
+      </div>
+      <div class="music-volume-row">
+        <span>🔈</span>
+        <input type="range" id="musicVolume" min="0" max="100" value="45">
+        <button type="button" class="music-stop-btn" id="musicStopBtn">关闭</button>
+      </div>
+    </div>
   </header>
 
   <main id="main">
@@ -185,14 +204,38 @@
         <button class="btn btn-primary btn-block" id="breathToggle">开始练习</button>
       </div>
 
-      <div class="card">
+      <div class="card" id="meditationCard">
         <h3>🧘 正念冥想</h3>
         <div class="care-list" id="meditationList"></div>
       </div>
 
+      <div class="card meditation-session" id="meditationSession" hidden>
+        <div class="med-visual">
+          <div class="med-aura"></div>
+          <img class="med-orb" src="assets/breath-orb.png" alt="">
+          <span class="med-particle p1"></span>
+          <span class="med-particle p2"></span>
+          <span class="med-particle p3"></span>
+        </div>
+        <div class="med-timer" id="medTimer">00:00</div>
+        <div class="med-guidance" id="medGuidance"></div>
+        <p class="muted small" style="text-align:center;margin:14px 0 6px">伴奏音乐</p>
+        <div class="music-track-row">
+          <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光</button>
+          <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声</button>
+          <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵</button>
+        </div>
+        <button class="btn btn-ghost btn-block" id="medEndBtn">结束冥想</button>
+      </div>
+
       <div class="card">
-        <h3>🎵 音乐推荐</h3>
-        <div class="care-list" id="musicList"></div>
+        <h3>🎵 背景音乐</h3>
+        <p class="muted small">治愈系环境音，点一首开始播放，会一直在后台陪着你</p>
+        <div class="music-track-row">
+          <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光序曲</button>
+          <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声白噪音</button>
+          <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵回响</button>
+        </div>
       </div>
 
       <div class="card">
@@ -232,6 +275,7 @@
 
 </div>
 
+<script src="audio.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

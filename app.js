@@ -444,14 +444,18 @@
 
   // ---------- self-care recommendations ----------
   const MEDITATIONS = [
-    { emoji: '🌬️', title: '5分钟正念呼吸', desc: '专注于呼吸的进出，留意念头飘走时轻轻把注意力带回来。', query: '5分钟正念冥想' },
-    { emoji: '🌊', title: '身体扫描放松', desc: '从头到脚逐部位放松肌肉，释放身体里积攒的紧张感。', query: '身体扫描冥想' },
-    { emoji: '🙏', title: '感恩练习', desc: '写下或默念今天让你感激的三件小事，哪怕很微小。', query: '感恩冥想' },
-  ];
-  const MUSIC = [
-    { emoji: '🎧', title: '舒缓白噪音/自然音', desc: '雨声、海浪、森林白噪音，帮助大脑放慢下来。', query: '放松 白噪音 自然音' },
-    { emoji: '🎹', title: '轻钢琴 / Lo-fi', desc: '节奏平稳、无歌词的背景音乐，适合专注或休息。', query: 'lofi 轻音乐 放松' },
-    { emoji: '🎶', title: '疗愈歌单', desc: '别人精心整理的低落情绪疗愈歌单，找找共鸣。', query: '情绪疗愈 歌单' },
+    {
+      emoji: '🌬️', title: '5分钟正念呼吸', desc: '专注于呼吸的进出，留意念头飘走时轻轻把注意力带回来。',
+      guidance: ['留意此刻的呼吸，不用刻意改变它', '吸气时，感受空气缓缓进入身体', '呼气时，让肩膀和下颌自然放松', '如果念头飘走了，轻轻把注意力带回呼吸就好'],
+    },
+    {
+      emoji: '🌊', title: '身体扫描放松', desc: '从头到脚逐部位放松肌肉，释放身体里积攒的紧张感。',
+      guidance: ['把注意力带到头顶，感受那里的重量', '慢慢向下，留意肩颈是否在不自觉地紧绷', '继续向下，感受手臂、后背的松紧', '最后来到双脚，感受它们与地面的接触'],
+    },
+    {
+      emoji: '🙏', title: '感恩练习', desc: '写下或默念今天让你感激的三件小事，哪怕很微小。',
+      guidance: ['想一件今天发生的、让你感到一点点温暖的小事', '它可以很微小，一杯热水、一句问候都算', '感受一下，此刻身体里有没有一点点放松', '不用完美，能想起一件已经很好了'],
+    },
   ];
   const EXERCISES = [
     { emoji: '🚶', title: '10分钟散步', desc: '走出房间，哪怕只是楼下转一圈，让身体先动起来。' },
@@ -459,9 +463,6 @@
     { emoji: '🧘‍♀️', title: '15分钟瑜伽', desc: '跟随任意一套入门瑜伽序列，专注呼吸与身体的连接。' },
     { emoji: '⚡', title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
   ];
-
-  function musicLink(query) { return 'https://music.163.com/#/search/m/?s=' + encodeURIComponent(query); }
-  function meditationLink(query) { return 'https://www.xiaoyuzhoufm.com/search/' + encodeURIComponent(query); }
 
   function getRecommendations(score) {
     // score: null | 1-5
@@ -502,27 +503,18 @@
     const rec = getRecommendations(score);
     document.getElementById('careIntro').textContent = rec.intro;
 
-    document.getElementById('meditationList').innerHTML = MEDITATIONS.map(m => `
+    document.getElementById('meditationList').innerHTML = MEDITATIONS.map((m, i) => `
       <div class="care-item">
         <span class="ci-emoji">${m.emoji}</span>
         <div>
           <div class="ci-title">${m.title}</div>
           <div class="ci-desc">${m.desc}</div>
-          <a href="${meditationLink(m.query)}" target="_blank" rel="noopener">找一段引导音频 →</a>
+          <button type="button" class="med-start-btn" data-med-index="${i}">开始冥想 →</button>
         </div>
       </div>
     `).join('');
 
-    document.getElementById('musicList').innerHTML = MUSIC.map(m => `
-      <div class="care-item">
-        <span class="ci-emoji">${m.emoji}</span>
-        <div>
-          <div class="ci-title">${m.title}</div>
-          <div class="ci-desc">${m.desc}</div>
-          <a href="${musicLink(m.query)}" target="_blank" rel="noopener">去听听看 →</a>
-        </div>
-      </div>
-    `).join('');
+    syncMusicUI();
 
     document.getElementById('exerciseList').innerHTML = EXERCISES.map(m => `
       <div class="care-item">
@@ -593,6 +585,107 @@
     if (breathRunning) stopBreathing();
     else startBreathing();
   });
+
+  // ---------- background music ----------
+  function syncMusicUI() {
+    const current = window.AmbientAudio ? window.AmbientAudio.current() : null;
+    document.querySelectorAll('.music-track-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.track === current);
+    });
+    const icon = document.getElementById('musicBtnIcon');
+    if (icon) icon.textContent = current ? '🎶' : '🎵';
+  }
+
+  document.querySelectorAll('.music-track-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const btn = e.target.closest('.music-track-btn');
+      if (!btn || !window.AmbientAudio) return;
+      const track = btn.dataset.track;
+      if (window.AmbientAudio.current() === track) {
+        window.AmbientAudio.stop();
+      } else {
+        window.AmbientAudio.play(track);
+      }
+      syncMusicUI();
+    });
+  });
+
+  const musicVolumeInput = document.getElementById('musicVolume');
+  if (musicVolumeInput) {
+    musicVolumeInput.addEventListener('input', () => {
+      if (window.AmbientAudio) window.AmbientAudio.setVolume(Number(musicVolumeInput.value) / 100);
+    });
+  }
+
+  const musicStopBtn = document.getElementById('musicStopBtn');
+  if (musicStopBtn) {
+    musicStopBtn.addEventListener('click', () => {
+      if (window.AmbientAudio) window.AmbientAudio.stop();
+      syncMusicUI();
+    });
+  }
+
+  document.getElementById('musicBtn').addEventListener('click', () => {
+    const panel = document.getElementById('musicPanel');
+    panel.hidden = !panel.hidden;
+  });
+
+  // ---------- meditation session ----------
+  let medTimerInterval = null;
+  let medGuidanceInterval = null;
+  let medElapsedSeconds = 0;
+
+  function openMeditationSession(index) {
+    const med = MEDITATIONS[index];
+    if (!med) return;
+    document.getElementById('meditationCard').hidden = true;
+    document.getElementById('meditationSession').hidden = false;
+
+    medElapsedSeconds = 0;
+    document.getElementById('medTimer').textContent = '00:00';
+
+    let gi = 0;
+    const guidanceEl = document.getElementById('medGuidance');
+    guidanceEl.textContent = med.guidance[0];
+    guidanceEl.style.opacity = 1;
+    clearInterval(medGuidanceInterval);
+    medGuidanceInterval = setInterval(() => {
+      gi = (gi + 1) % med.guidance.length;
+      guidanceEl.style.opacity = 0;
+      setTimeout(() => {
+        guidanceEl.textContent = med.guidance[gi];
+        guidanceEl.style.opacity = 1;
+      }, 400);
+    }, 6000);
+
+    clearInterval(medTimerInterval);
+    medTimerInterval = setInterval(() => {
+      medElapsedSeconds++;
+      const mm = String(Math.floor(medElapsedSeconds / 60)).padStart(2, '0');
+      const ss = String(medElapsedSeconds % 60).padStart(2, '0');
+      document.getElementById('medTimer').textContent = `${mm}:${ss}`;
+    }, 1000);
+
+    if (window.AmbientAudio && !window.AmbientAudio.isPlaying()) {
+      window.AmbientAudio.play('pad');
+      syncMusicUI();
+    }
+  }
+
+  function closeMeditationSession() {
+    clearInterval(medTimerInterval);
+    clearInterval(medGuidanceInterval);
+    document.getElementById('meditationSession').hidden = true;
+    document.getElementById('meditationCard').hidden = false;
+  }
+
+  document.getElementById('meditationList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.med-start-btn');
+    if (!btn) return;
+    openMeditationSession(Number(btn.dataset.medIndex));
+  });
+
+  document.getElementById('medEndBtn').addEventListener('click', closeMeditationSession);
 
   // ---------- history ----------
   function renderHistory(filter) {

@@ -81,6 +81,12 @@ img { max-width: 100%; }
   border-bottom: 1px solid var(--border);
 }
 
+.topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -95,6 +101,75 @@ img { max-width: 100%; }
   margin-top: 4px;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.music-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.music-panel {
+  margin-top: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.music-track-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.music-track-btn {
+  flex: 1;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+.music-track-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.music-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.music-volume-row input[type="range"] { flex: 1; }
+.music-stop-btn {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
 }
 
 main {
@@ -131,7 +206,8 @@ main {
 
 .garden-scene {
   position: relative;
-  aspect-ratio: 16 / 11;
+  height: min(60vh, 640px);
+  min-height: 420px;
   background-size: cover;
   background-position: center bottom;
   overflow: hidden;
@@ -143,14 +219,14 @@ main {
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));
 }
 .sprite-butterfly {
-  width: 34px;
-  top: 18%;
+  width: 46px;
+  top: 16%;
   left: 10%;
   animation: driftButterfly 16s ease-in-out infinite;
 }
 .sprite-firefly {
-  width: 26px;
-  top: 32%;
+  width: 34px;
+  top: 30%;
   left: 70%;
   animation: driftFirefly 9s ease-in-out infinite;
 }
@@ -172,10 +248,10 @@ main {
 
 .breath-orb-fab {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 52px;
-  height: 52px;
+  top: 14px;
+  right: 14px;
+  width: 64px;
+  height: 64px;
   border: none;
   background: rgba(255, 255, 255, 0.4);
   border-radius: 50%;
@@ -194,10 +270,10 @@ main {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 6%;
+  bottom: 8%;
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: 6px;
   padding: 0 4%;
   overflow-x: auto;
   scrollbar-width: none;
@@ -206,8 +282,8 @@ main {
 
 .day-slot {
   flex: 0 0 auto;
-  width: 44px;
-  height: 64px;
+  width: 66px;
+  height: 92px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -217,10 +293,10 @@ main {
   padding: 0;
 }
 .day-slot img {
-  width: 40px;
-  height: 40px;
+  width: 62px;
+  height: 62px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12));
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.14));
 }
 .day-slot.today-slot::after {
   content: '';
@@ -228,8 +304,8 @@ main {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 30px;
-  height: 6px;
+  width: 44px;
+  height: 8px;
   border-radius: 50%;
   background: rgba(124, 111, 240, 0.25);
 }
@@ -274,7 +350,8 @@ main {
   font-size: 11px;
 }
 .quick-mood-btn:active { background: var(--accent-soft); transform: scale(0.94); }
-.quick-mood-btn img { width: 34px; height: 34px; object-fit: contain; }
+.quick-mood-btn img { width: 52px; height: 52px; object-fit: contain; }
+.quick-mood-btn span:last-child { font-size: 12.5px; }
 
 .detail-bubble {
   margin: 0 14px 16px;
@@ -476,6 +553,71 @@ textarea, .text-input {
   text-align: center;
 }
 
+/* meditation session */
+.meditation-session { text-align: center; }
+.med-visual {
+  position: relative;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.med-aura {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+  animation: medAuraPulse 6s ease-in-out infinite;
+}
+.med-orb {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  animation: breathPulse 5s ease-in-out infinite;
+}
+@keyframes medAuraPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.25); opacity: 1; }
+}
+.med-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  filter: blur(0.5px);
+}
+.med-particle.p1 { left: 30%; bottom: 20%; animation: medFloat 7s ease-in-out infinite; }
+.med-particle.p2 { left: 65%; bottom: 15%; animation: medFloat 8.5s ease-in-out 1.5s infinite; }
+.med-particle.p3 { left: 50%; bottom: 25%; animation: medFloat 6.5s ease-in-out 3s infinite; }
+@keyframes medFloat {
+  0%   { transform: translateY(0); opacity: 0; }
+  15%  { opacity: 0.8; }
+  85%  { opacity: 0.3; }
+  100% { transform: translateY(-90px); opacity: 0; }
+}
+.med-timer {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.med-guidance {
+  min-height: 40px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  transition: opacity 0.4s ease;
+  padding: 0 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .med-aura, .med-orb, .med-particle { animation: none; }
+}
+
 /* care lists */
 .care-list { display: flex; flex-direction: column; gap: 10px; }
 .care-item {
@@ -490,6 +632,16 @@ textarea, .text-input {
 .care-item .ci-title { font-weight: 600; font-size: 14px; }
 .care-item .ci-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
 .care-item a { color: var(--accent); text-decoration: none; font-size: 12.5px; font-weight: 600; }
+.med-start-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
 
 /* history */
 .history-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
