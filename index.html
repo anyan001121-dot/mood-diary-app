@@ -16,11 +16,11 @@
   <header class="topbar">
     <div class="topbar-row">
       <div class="brand">
-        <span class="brand-emoji">🌤️</span>
         <span class="brand-name">心晴日记</span>
       </div>
       <button class="music-btn" id="musicBtn" title="背景音乐">
-        <span id="musicBtnIcon">🎵</span>
+        <img src="assets/icon-tool-music.png" alt="背景音乐">
+        <span class="music-btn-dot" id="musicBtnDot" hidden></span>
       </button>
     </div>
     <div class="topbar-sub" id="todayStatus">今天还没有记录心情</div>
@@ -28,12 +28,11 @@
     <div class="music-panel" id="musicPanel" hidden>
       <p class="muted small" style="margin:0 0 8px">治愈系背景音乐，可随时切换或关闭</p>
       <div class="music-track-row">
-        <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光序曲</button>
-        <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声白噪音</button>
-        <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵回响</button>
+        <button type="button" class="music-track-btn" data-track="pad">暖光序曲</button>
+        <button type="button" class="music-track-btn" data-track="rain">雨声白噪音</button>
+        <button type="button" class="music-track-btn" data-track="bowl">颂钵回响</button>
       </div>
       <div class="music-volume-row">
-        <span>🔈</span>
         <input type="range" id="musicVolume" min="0" max="100" value="45">
         <button type="button" class="music-stop-btn" id="musicStopBtn">关闭</button>
       </div>
@@ -59,6 +58,11 @@
 
         <div class="garden-prompt" id="gardenPrompt">此刻，你感觉怎么样？点一下就好</div>
 
+        <div class="garden-progress" id="gardenProgress">
+          <div class="garden-progress-bar"><div class="garden-progress-fill" id="gardenProgressFill" style="width:0%"></div></div>
+          <div class="garden-progress-text" id="gardenProgressText"></div>
+        </div>
+
         <div class="quick-mood-row" id="quickMoodRow">
           <button type="button" class="quick-mood-btn" data-mood="5"><img src="assets/flower-great-bud.png" alt="很好"><span>很好</span></button>
           <button type="button" class="quick-mood-btn" data-mood="4"><img src="assets/flower-good-bud.png" alt="不错"><span>不错</span></button>
@@ -68,7 +72,7 @@
         </div>
 
         <div class="detail-bubble" id="detailBubble" hidden>
-          <span id="detailBubbleText">记下了 🌱</span>
+          <span id="detailBubbleText">记下了</span>
           <button type="button" id="detailBubbleBtn">补充一点细节</button>
         </div>
       </div>
@@ -109,11 +113,11 @@
         <div class="field">
           <label>你现在感觉…</label>
           <div class="mood-picker" id="moodPicker">
-            <button type="button" class="mood-opt" data-mood="5"><span class="mood-emoji">😄</span><span>很好</span></button>
-            <button type="button" class="mood-opt" data-mood="4"><span class="mood-emoji">🙂</span><span>不错</span></button>
-            <button type="button" class="mood-opt" data-mood="3"><span class="mood-emoji">😐</span><span>一般</span></button>
-            <button type="button" class="mood-opt" data-mood="2"><span class="mood-emoji">😔</span><span>低落</span></button>
-            <button type="button" class="mood-opt" data-mood="1"><span class="mood-emoji">😣</span><span>很糟</span></button>
+            <button type="button" class="mood-opt" data-mood="5"><img class="mood-emoji" src="assets/icon-mood-5.png" alt="很好"><span>很好</span></button>
+            <button type="button" class="mood-opt" data-mood="4"><img class="mood-emoji" src="assets/icon-mood-4.png" alt="不错"><span>不错</span></button>
+            <button type="button" class="mood-opt" data-mood="3"><img class="mood-emoji" src="assets/icon-mood-3.png" alt="一般"><span>一般</span></button>
+            <button type="button" class="mood-opt" data-mood="2"><img class="mood-emoji" src="assets/icon-mood-2.png" alt="低落"><span>低落</span></button>
+            <button type="button" class="mood-opt" data-mood="1"><img class="mood-emoji" src="assets/icon-mood-1.png" alt="很糟"><span>很糟</span></button>
           </div>
         </div>
 
@@ -192,7 +196,7 @@
       </div>
 
       <div class="card">
-        <h3>🫧 呼吸练习</h3>
+        <h3>呼吸练习</h3>
         <p class="muted small">跟随圆圈的扩张与收缩调整呼吸，帮助神经系统平静下来</p>
         <div class="breathing-wrap">
           <div class="breathing-circle" id="breathCircle"><span id="breathLabel">开始</span></div>
@@ -205,7 +209,7 @@
       </div>
 
       <div class="card" id="meditationCard">
-        <h3>🧘 正念冥想</h3>
+        <h3><img class="icon-img" src="assets/icon-tool-meditation.png" alt="">正念冥想</h3>
         <div class="care-list" id="meditationList"></div>
       </div>
 
@@ -221,25 +225,25 @@
         <div class="med-guidance" id="medGuidance"></div>
         <p class="muted small" style="text-align:center;margin:14px 0 6px">伴奏音乐</p>
         <div class="music-track-row">
-          <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光</button>
-          <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声</button>
-          <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵</button>
+          <button type="button" class="music-track-btn" data-track="pad">暖光</button>
+          <button type="button" class="music-track-btn" data-track="rain">雨声</button>
+          <button type="button" class="music-track-btn" data-track="bowl">颂钵</button>
         </div>
         <button class="btn btn-ghost btn-block" id="medEndBtn">结束冥想</button>
       </div>
 
       <div class="card">
-        <h3>🎵 背景音乐</h3>
+        <h3><img class="icon-img" src="assets/icon-tool-music.png" alt="">背景音乐</h3>
         <p class="muted small">治愈系环境音，点一首开始播放，会一直在后台陪着你</p>
         <div class="music-track-row">
-          <button type="button" class="music-track-btn" data-track="pad"><span>🌤️</span>暖光序曲</button>
-          <button type="button" class="music-track-btn" data-track="rain"><span>🌧️</span>雨声白噪音</button>
-          <button type="button" class="music-track-btn" data-track="bowl"><span>🎐</span>颂钵回响</button>
+          <button type="button" class="music-track-btn" data-track="pad">暖光序曲</button>
+          <button type="button" class="music-track-btn" data-track="rain">雨声白噪音</button>
+          <button type="button" class="music-track-btn" data-track="bowl">颂钵回响</button>
         </div>
       </div>
 
       <div class="card">
-        <h3>🏃 运动建议</h3>
+        <h3><img class="icon-img" src="assets/icon-tool-exercise.png" alt="">运动建议</h3>
         <div class="care-list" id="exerciseList"></div>
       </div>
     </section>
@@ -267,10 +271,10 @@
   </main>
 
   <nav class="tabbar">
-    <button class="tab-item active" data-nav="home"><span class="tab-icon">🌷</span><span>花园</span></button>
-    <button class="tab-item" data-nav="insight"><span class="tab-icon">📊</span><span>洞察</span></button>
-    <button class="tab-item" data-nav="care"><span class="tab-icon">💆</span><span>关怀</span></button>
-    <button class="tab-item" data-nav="history"><span class="tab-icon">📖</span><span>历史</span></button>
+    <button class="tab-item active" data-nav="home"><img class="tab-icon" src="assets/icon-tab-garden.png" alt=""><span>花园</span></button>
+    <button class="tab-item" data-nav="insight"><img class="tab-icon" src="assets/icon-tab-insight.png" alt=""><span>洞察</span></button>
+    <button class="tab-item" data-nav="care"><img class="tab-icon" src="assets/icon-tab-care.png" alt=""><span>关怀</span></button>
+    <button class="tab-item" data-nav="history"><img class="tab-icon" src="assets/icon-tab-history.png" alt=""><span>历史</span></button>
   </nav>
 
 </div>

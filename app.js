@@ -3,11 +3,11 @@
 
   const STORAGE_KEY = 'moodDiary.entries.v1';
   const MOOD_META = {
-    5: { emoji: '😄', label: '很好', color: 'var(--mood-5)' },
-    4: { emoji: '🙂', label: '不错', color: 'var(--mood-4)' },
-    3: { emoji: '😐', label: '一般', color: 'var(--mood-3)' },
-    2: { emoji: '😔', label: '低落', color: 'var(--mood-2)' },
-    1: { emoji: '😣', label: '很糟', color: 'var(--mood-1)' },
+    5: { icon: 'assets/icon-mood-5.png', label: '很好', color: 'var(--mood-5)' },
+    4: { icon: 'assets/icon-mood-4.png', label: '不错', color: 'var(--mood-4)' },
+    3: { icon: 'assets/icon-mood-3.png', label: '一般', color: 'var(--mood-3)' },
+    2: { icon: 'assets/icon-mood-2.png', label: '低落', color: 'var(--mood-2)' },
+    1: { icon: 'assets/icon-mood-1.png', label: '很糟', color: 'var(--mood-1)' },
   };
   // stage 1 = intensity 1-3, stage 2 = intensity 4-5
   const MOOD_SPRITES = {
@@ -184,7 +184,7 @@
 
     const confirmEl = document.getElementById('saveConfirm');
     confirmEl.hidden = false;
-    confirmEl.textContent = '已记录，感谢你花时间关照自己的情绪 🌱';
+    confirmEl.textContent = '已记录，感谢你花时间关照自己的情绪';
     setTimeout(() => { confirmEl.hidden = true; }, 2200);
 
     showView('home');
@@ -293,7 +293,7 @@
     const rec = getRecommendations(recent);
     const previewEl = document.getElementById('homeRecommend');
     previewEl.innerHTML = rec.quick.map(r => `
-      <div class="recommend-item"><span class="ri-emoji">${r.emoji}</span><span>${r.text}</span></div>
+      <div class="recommend-item"><img class="ri-emoji" src="${r.icon}" alt=""><span>${r.text}</span></div>
     `).join('');
   }
 
@@ -304,35 +304,58 @@
   }
 
   // ---------- garden ----------
-  const GARDEN_DAYS = 14;
+  // 每条记录都在花园里种下一朵新花（而不是按天覆盖），每种满 GARDEN_MILESTONE 朵算种满一片花园
+  const GARDEN_MILESTONE = 12;
+  const GARDEN_RENDER_CAP = 80; // 只渲染最近的N朵，避免记录很多之后时间轴过长影响性能
 
   function renderGarden() {
-    const entries = loadEntries();
-    const today = startOfDay(Date.now());
+    const entries = loadEntries().slice().sort((a, b) => a.ts - b.ts);
+    const total = entries.length;
     const el = document.getElementById('gardenTimeline');
-    let html = '';
-    for (let i = GARDEN_DAYS - 1; i >= 0; i--) {
-      const dayStart = today - i * 86400000;
-      const key = dayKey(dayStart);
-      const dayEntries = entries.filter(e => dayKey(e.ts) === key).sort((a, b) => b.ts - a.ts);
-      const latest = dayEntries[0];
-      const isToday = i === 0;
-      const classes = ['day-slot'];
-      if (isToday) classes.push('today-slot');
-      if (!latest) classes.push('empty-slot');
-      if (latest) {
-        html += `<button type="button" class="${classes.join(' ')}" data-entry-id="${latest.id}" title="${fmtShort(dayStart)}"><img src="${spriteFor(latest)}" alt="${MOOD_META[latest.mood].label}"></button>`;
-      } else {
-        html += `<div class="${classes.join(' ')}" title="${fmtShort(dayStart)}"></div>`;
-      }
+
+    if (!total) {
+      el.innerHTML = '<div class="garden-empty-hint">这里还没有花，点下面的花苞种下第一朵</div>';
+    } else {
+      const recent = entries.slice(-GARDEN_RENDER_CAP);
+      const lastId = entries[total - 1].id;
+      el.innerHTML = recent.map(e => {
+        const classes = ['day-slot'];
+        if (e.id === lastId) classes.push('today-slot');
+        return `<button type="button" class="${classes.join(' ')}" data-entry-id="${e.id}" title="${fmtShort(e.ts)} · ${MOOD_META[e.mood].label}"><img src="${spriteFor(e)}" alt="${MOOD_META[e.mood].label}"></button>`;
+      }).join('');
+      el.scrollLeft = el.scrollWidth;
     }
-    el.innerHTML = html;
-    el.scrollLeft = el.scrollWidth;
 
     const hasToday = entries.some(e => dayKey(e.ts) === dayKey(Date.now()));
     document.getElementById('gardenPrompt').textContent = hasToday
       ? '今天已经记录过了，还想再说说现在的感觉吗？'
       : '此刻，你感觉怎么样？点一下就好';
+
+    renderGardenProgress(total);
+  }
+
+  function renderGardenProgress(total) {
+    const filledInPlot = total === 0 ? 0 : (total % GARDEN_MILESTONE === 0 ? GARDEN_MILESTONE : total % GARDEN_MILESTONE);
+    const remaining = GARDEN_MILESTONE - filledInPlot;
+    const plotNumber = total === 0 ? 1 : Math.ceil(total / GARDEN_MILESTONE);
+
+    document.getElementById('gardenProgressFill').style.width = (filledInPlot / GARDEN_MILESTONE * 100) + '%';
+    document.getElementById('gardenProgressText').textContent = total === 0
+      ? '种下第一朵，开始这片花园'
+      : (remaining === 0
+          ? `第 ${plotNumber} 片花园种满啦`
+          : `第 ${plotNumber} 片花园 · 已种 ${filledInPlot}/${GARDEN_MILESTONE} 朵 · 再种 ${remaining} 朵集满`);
+  }
+
+  function celebrateMilestone() {
+    const el = document.getElementById('gardenProgress');
+    const textEl = document.getElementById('gardenProgressText');
+    el.classList.add('celebrate');
+    textEl.textContent = '这片花园种满啦，新的一片已经开始';
+    setTimeout(() => {
+      el.classList.remove('celebrate');
+      renderGardenProgress(loadEntries().length);
+    }, 3200);
   }
 
   document.getElementById('gardenTimeline').addEventListener('click', (e) => {
@@ -345,6 +368,7 @@
     const entry = { id: uid(), ts: Date.now(), mood: score, intensity: 3, tags: [], note: '' };
     addEntry(entry);
     lastQuickEntryId = entry.id;
+    const total = loadEntries().length;
 
     renderHome();
 
@@ -354,10 +378,14 @@
       setTimeout(() => todaySlot.classList.remove('just-grown'), 650);
     }
     const bubble = document.getElementById('detailBubble');
-    document.getElementById('detailBubbleText').textContent = `记下了 ${MOOD_META[score].emoji} 感谢你花时间关照自己`;
+    document.getElementById('detailBubbleText').textContent = `记下了「${MOOD_META[score].label}」，感谢你花时间关照自己`;
     bubble.hidden = false;
     clearTimeout(quickLogMood._hideTimer);
     quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 6000);
+
+    if (total > 0 && total % GARDEN_MILESTONE === 0) {
+      celebrateMilestone();
+    }
   }
 
   document.getElementById('quickMoodRow').addEventListener('click', (e) => {
@@ -445,23 +473,23 @@
   // ---------- self-care recommendations ----------
   const MEDITATIONS = [
     {
-      emoji: '🌬️', title: '5分钟正念呼吸', desc: '专注于呼吸的进出，留意念头飘走时轻轻把注意力带回来。',
+      title: '5分钟正念呼吸', desc: '专注于呼吸的进出，留意念头飘走时轻轻把注意力带回来。',
       guidance: ['留意此刻的呼吸，不用刻意改变它', '吸气时，感受空气缓缓进入身体', '呼气时，让肩膀和下颌自然放松', '如果念头飘走了，轻轻把注意力带回呼吸就好'],
     },
     {
-      emoji: '🌊', title: '身体扫描放松', desc: '从头到脚逐部位放松肌肉，释放身体里积攒的紧张感。',
+      title: '身体扫描放松', desc: '从头到脚逐部位放松肌肉，释放身体里积攒的紧张感。',
       guidance: ['把注意力带到头顶，感受那里的重量', '慢慢向下，留意肩颈是否在不自觉地紧绷', '继续向下，感受手臂、后背的松紧', '最后来到双脚，感受它们与地面的接触'],
     },
     {
-      emoji: '🙏', title: '感恩练习', desc: '写下或默念今天让你感激的三件小事，哪怕很微小。',
+      title: '感恩练习', desc: '写下或默念今天让你感激的三件小事，哪怕很微小。',
       guidance: ['想一件今天发生的、让你感到一点点温暖的小事', '它可以很微小，一杯热水、一句问候都算', '感受一下，此刻身体里有没有一点点放松', '不用完美，能想起一件已经很好了'],
     },
   ];
   const EXERCISES = [
-    { emoji: '🚶', title: '10分钟散步', desc: '走出房间，哪怕只是楼下转一圈，让身体先动起来。' },
-    { emoji: '🤸', title: '5分钟拉伸', desc: '肩颈、背部、腿部拉伸，缓解久坐带来的紧绷。' },
-    { emoji: '🧘‍♀️', title: '15分钟瑜伽', desc: '跟随任意一套入门瑜伽序列，专注呼吸与身体的连接。' },
-    { emoji: '⚡', title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
+    { title: '10分钟散步', desc: '走出房间，哪怕只是楼下转一圈，让身体先动起来。' },
+    { title: '5分钟拉伸', desc: '肩颈、背部、腿部拉伸，缓解久坐带来的紧绷。' },
+    { title: '15分钟瑜伽', desc: '跟随任意一套入门瑜伽序列，专注呼吸与身体的连接。' },
+    { title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
   ];
 
   function getRecommendations(score) {
@@ -480,18 +508,18 @@
     };
 
     const quickMap = {
-      none: [{ emoji: '✍️', text: '先记录一次今天的心情' }],
+      none: [{ icon: 'assets/icon-tool-journal.png', text: '先记录一次今天的心情' }],
       low: [
-        { emoji: '🫧', text: '3分钟箱式呼吸，平复神经紧张' },
-        { emoji: '🌊', text: '听一段自然白噪音，让自己静下来' },
+        { icon: 'assets/icon-tool-meditation.png', text: '3分钟箱式呼吸，平复神经紧张' },
+        { icon: 'assets/icon-tool-music.png', text: '听一段自然白噪音，让自己静下来' },
       ],
       mid: [
-        { emoji: '🚶', text: '出门走10分钟，换个环境' },
-        { emoji: '🙏', text: '写下今天值得感激的一件小事' },
+        { icon: 'assets/icon-tool-exercise.png', text: '出门走10分钟，换个环境' },
+        { icon: 'assets/icon-tool-journal.png', text: '写下今天值得感激的一件小事' },
       ],
       high: [
-        { emoji: '⚡', text: '趁状态好，做一次短时运动' },
-        { emoji: '🎶', text: '收藏一份能代表此刻心情的歌单' },
+        { icon: 'assets/icon-tool-exercise.png', text: '趁状态好，做一次短时运动' },
+        { icon: 'assets/icon-tool-music.png', text: '收藏一份能代表此刻心情的歌单' },
       ],
     };
 
@@ -505,7 +533,6 @@
 
     document.getElementById('meditationList').innerHTML = MEDITATIONS.map((m, i) => `
       <div class="care-item">
-        <span class="ci-emoji">${m.emoji}</span>
         <div>
           <div class="ci-title">${m.title}</div>
           <div class="ci-desc">${m.desc}</div>
@@ -518,7 +545,6 @@
 
     document.getElementById('exerciseList').innerHTML = EXERCISES.map(m => `
       <div class="care-item">
-        <span class="ci-emoji">${m.emoji}</span>
         <div>
           <div class="ci-title">${m.title}</div>
           <div class="ci-desc">${m.desc}</div>
@@ -592,8 +618,8 @@
     document.querySelectorAll('.music-track-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.track === current);
     });
-    const icon = document.getElementById('musicBtnIcon');
-    if (icon) icon.textContent = current ? '🎶' : '🎵';
+    const dot = document.getElementById('musicBtnDot');
+    if (dot) dot.hidden = !current;
   }
 
   document.querySelectorAll('.music-track-row').forEach(row => {
@@ -708,7 +734,7 @@
       return `
         <div class="history-item" data-id="${e.id}">
           <div class="history-item-top">
-            <span class="hi-emoji">${meta.emoji}</span>
+            <img class="hi-emoji" src="${meta.icon}" alt="${meta.label}">
             <span>${meta.label} · 强度${e.intensity}</span>
             <span class="history-item-date">${fmtFull(e.ts)}</span>
             <button class="history-del" data-del="${e.id}">删除</button>

@@ -95,8 +95,6 @@ img { max-width: 100%; }
   font-size: 18px;
 }
 
-.brand-emoji { font-size: 22px; }
-
 .topbar-sub {
   margin-top: 4px;
   font-size: 13px;
@@ -104,16 +102,32 @@ img { max-width: 100%; }
 }
 
 .music-btn {
+  position: relative;
   width: 36px;
   height: 36px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--card-bg);
-  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.music-btn img { width: 18px; height: 18px; object-fit: contain; }
+.music-btn-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mood-4);
+  border: 1.5px solid var(--card-bg);
+  animation: musicDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes musicDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.7; }
 }
 
 .music-panel {
@@ -189,7 +203,9 @@ main {
 }
 
 .card h2 { margin: 0 0 6px; font-size: 19px; }
-.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card h3 { margin: 0 0 6px; font-size: 16px; display: flex; align-items: center; gap: 7px; }
+
+.icon-img { width: 19px; height: 19px; object-fit: contain; flex-shrink: 0; }
 
 .muted { color: var(--text-muted); }
 .small { font-size: 13px; }
@@ -328,6 +344,53 @@ main {
   padding: 12px 12px 0;
 }
 
+.garden-empty-hint {
+  margin: auto 4% 10px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text);
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.garden-progress {
+  padding: 8px 16px 0;
+  transition: transform 0.3s ease;
+}
+.garden-progress-bar {
+  background: var(--bg);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+.garden-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--mood-5), var(--accent));
+  transition: width 0.5s ease;
+}
+.garden-progress-text {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.garden-progress.celebrate {
+  animation: gardenCelebrate 0.7s ease;
+}
+.garden-progress.celebrate .garden-progress-text {
+  color: var(--accent);
+  font-weight: 600;
+}
+@keyframes gardenCelebrate {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.05); }
+  60%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
 .quick-mood-row {
   display: flex;
   justify-content: space-between;
@@ -432,7 +495,7 @@ main {
   color: var(--text-muted);
   font-family: inherit;
 }
-.mood-opt .mood-emoji { font-size: 24px; }
+.mood-opt .mood-emoji { width: 28px; height: 28px; object-fit: contain; }
 .mood-opt.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 
 input[type="range"] { width: 100%; accent-color: var(--accent); }
@@ -499,7 +562,7 @@ textarea, .text-input {
   padding: 10px 12px;
   font-size: 13px;
 }
-.recommend-item .ri-emoji { font-size: 20px; }
+.recommend-item .ri-emoji { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
 
 /* calendar */
 .calendar-grid {
@@ -628,7 +691,6 @@ textarea, .text-input {
   border-radius: 12px;
   padding: 12px;
 }
-.care-item .ci-emoji { font-size: 22px; }
 .care-item .ci-title { font-weight: 600; font-size: 14px; }
 .care-item .ci-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
 .care-item a { color: var(--accent); text-decoration: none; font-size: 12.5px; font-weight: 600; }
@@ -651,7 +713,7 @@ textarea, .text-input {
   padding: 12px;
 }
 .history-item-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.history-item-top .hi-emoji { font-size: 20px; }
+.history-item-top .hi-emoji { width: 20px; height: 20px; object-fit: contain; }
 .history-item-date { color: var(--text-muted); margin-left: auto; font-size: 12px; }
 .history-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .history-tag { background: var(--accent-soft); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
@@ -687,7 +749,8 @@ textarea, .text-input {
   cursor: pointer;
   font-family: inherit;
 }
-.tab-icon { font-size: 19px; }
+.tab-icon { width: 22px; height: 22px; object-fit: contain; opacity: 0.55; }
+.tab-item.active .tab-icon { opacity: 1; }
 .tab-item.active { color: var(--accent); font-weight: 600; }
 
 @media (max-width: 380px) {
