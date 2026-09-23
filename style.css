@@ -746,11 +746,16 @@ textarea, .text-input {
   margin-top: 8px;
 }
 .cal-cell {
+  appearance: none;
   aspect-ratio: 1;
   border-radius: 6px;
   background: var(--bg);
   border: 1px solid var(--border);
+  padding: 0;
+  font: inherit;
 }
+.cal-cell.has-data { cursor: pointer; }
+.cal-cell.has-data:active { transform: scale(0.9); }
 .calendar-legend {
   display: flex;
   align-items: center;
@@ -1129,6 +1134,32 @@ textarea, .text-input {
   padding: 12px 14px;
   margin: 0 0 18px;
 }
+
+.sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.sheet-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--bg);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.sheet-list-row:active { background: var(--accent-soft); }
+.sheet-list-time { font-size: 13px; color: var(--text-muted); min-width: 42px; }
+.sheet-list-sprite { width: 28px; height: 28px; object-fit: contain; }
+.sheet-list-label { font-size: 14px; color: var(--text); font-weight: 600; }
 
 .toast {
   position: fixed;

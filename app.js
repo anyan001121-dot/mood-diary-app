@@ -684,28 +684,12 @@
     const d = new Date(ts);
     return `${d.getMonth() + 1}月${d.getDate()}日`;
   }
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
 
-  function openFlowerSheet(entryId) {
-    const entry = loadEntries().find(e => e.id === entryId);
-    if (!entry) return;
-    sheetEntryId = entryId;
-    document.getElementById('flowerSheetDate').textContent = `${fmtSheetDate(entry.ts)} · ${MOOD_META[entry.mood].label}`;
-    document.getElementById('flowerSheetMood').innerHTML =
-      `<img src="${MOOD_META[entry.mood].icon}" alt="">情绪强度 ${entry.intensity}/5`;
-    const tagsEl = document.getElementById('flowerSheetTags');
-    if (entry.tags && entry.tags.length) {
-      tagsEl.textContent = entry.tags.join(' · ');
-      tagsEl.hidden = false;
-    } else {
-      tagsEl.hidden = true;
-    }
-    const noteEl = document.getElementById('flowerSheetNote');
-    if (entry.note) {
-      noteEl.textContent = `"${entry.note}"`;
-      noteEl.hidden = false;
-    } else {
-      noteEl.hidden = true;
-    }
+  function showSheet() {
     const backdrop = document.getElementById('flowerSheetBackdrop');
     const sheet = document.getElementById('flowerSheet');
     backdrop.hidden = false;
@@ -724,6 +708,62 @@
       document.getElementById('flowerSheet').hidden = true;
     }, 300);
   }
+
+  // 轻点花园里一朵花：打开这一条记录的只读详情
+  function openFlowerSheet(entryId) {
+    const entry = loadEntries().find(e => e.id === entryId);
+    if (!entry) return;
+    sheetEntryId = entryId;
+    document.getElementById('flowerSheetDate').textContent = `${fmtSheetDate(entry.ts)} · ${MOOD_META[entry.mood].label}`;
+    const moodEl = document.getElementById('flowerSheetMood');
+    moodEl.innerHTML = `<img src="${MOOD_META[entry.mood].icon}" alt="">情绪强度 ${entry.intensity}/5`;
+    moodEl.hidden = false;
+    const tagsEl = document.getElementById('flowerSheetTags');
+    if (entry.tags && entry.tags.length) {
+      tagsEl.textContent = entry.tags.join(' · ');
+      tagsEl.hidden = false;
+    } else {
+      tagsEl.hidden = true;
+    }
+    const noteEl = document.getElementById('flowerSheetNote');
+    if (entry.note) {
+      noteEl.textContent = `"${entry.note}"`;
+      noteEl.hidden = false;
+    } else {
+      noteEl.hidden = true;
+    }
+    document.getElementById('flowerSheetList').hidden = true;
+    document.getElementById('flowerSheetViewBtn').hidden = false;
+    showSheet();
+  }
+
+  // 点日历里的一天：如果那天有不止一条记录，先展示一条时间轴，
+  // 点其中一条再进入上面那个只读详情——"一天只是一个格子"变成"一天是一条轨迹"。
+  function openDaySheet(dayEntries) {
+    const list = dayEntries.slice().sort((a, b) => a.ts - b.ts);
+    if (list.length === 1) { openFlowerSheet(list[0].id); return; }
+    sheetEntryId = null;
+    document.getElementById('flowerSheetDate').textContent = fmtSheetDate(list[0].ts);
+    document.getElementById('flowerSheetMood').hidden = true;
+    document.getElementById('flowerSheetTags').hidden = true;
+    document.getElementById('flowerSheetNote').hidden = true;
+    document.getElementById('flowerSheetViewBtn').hidden = true;
+    const listEl = document.getElementById('flowerSheetList');
+    listEl.innerHTML = list.map(e => `
+      <button type="button" class="sheet-list-row" data-entry-id="${e.id}">
+        <span class="sheet-list-time">${fmtTime(e.ts)}</span>
+        <img class="sheet-list-sprite" src="${spriteFor(e)}" alt="">
+        <span class="sheet-list-label">${MOOD_META[e.mood].label}</span>
+      </button>
+    `).join('');
+    listEl.hidden = false;
+    showSheet();
+  }
+
+  document.getElementById('flowerSheetList').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-entry-id]');
+    if (row) openFlowerSheet(row.dataset.entryId);
+  });
 
   document.getElementById('flowerSheetBackdrop').addEventListener('click', closeFlowerSheet);
   document.getElementById('flowerSheetViewBtn').addEventListener('click', () => {
@@ -1030,9 +1070,17 @@
       }
       const color = moodColorForScore(d.avg);
       const opacity = 0.35 + (d.avg / 5) * 0.65;
-      return `<div class="cal-cell" style="background:${color};opacity:${opacity.toFixed(2)};border-color:transparent" title="${fmtShort(d.ts)}：平均情绪 ${d.avg.toFixed(1)}"></div>`;
+      const countNote = d.count > 1 ? `（${d.count} 条）` : '';
+      return `<button type="button" class="cal-cell has-data" data-day="${dayKey(d.ts)}" style="background:${color};opacity:${opacity.toFixed(2)};border-color:transparent" title="${fmtShort(d.ts)}：平均情绪 ${d.avg.toFixed(1)}${countNote}"></button>`;
     }).join('');
   }
+
+  document.getElementById('moodCalendar').addEventListener('click', (e) => {
+    const cell = e.target.closest('.cal-cell.has-data');
+    if (!cell) return;
+    const dayEntries = loadEntries().filter(en => dayKey(en.ts) === cell.dataset.day);
+    if (dayEntries.length) openDaySheet(dayEntries);
+  });
 
   function renderTriggerAnalysis() {
     const entries = loadEntries();
