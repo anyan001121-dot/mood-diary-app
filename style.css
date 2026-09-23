@@ -106,12 +106,10 @@ img { max-width: 100%; }
   gap: 8px;
 }
 
-.brand-name {
-  font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-weight: 400;
-  font-size: 23px;
-  color: var(--accent-deep);
-  letter-spacing: 1px;
+.brand-wordmark {
+  height: 30px;
+  width: auto;
+  display: block;
 }
 
 .topbar-sub {
