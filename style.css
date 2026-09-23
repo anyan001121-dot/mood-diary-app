@@ -735,6 +735,98 @@ textarea, .text-input {
   .med-aura, .med-orb, .med-particle { animation: none; }
 }
 
+/* safety banner */
+.safety-banner { border: 1px solid var(--danger-soft); }
+.safety-banner h3 { color: var(--danger); }
+
+/* discovery / insight cards */
+.discovery-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.discovery-card {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.discovery-card p { margin: 0; font-size: 13.5px; line-height: 1.6; }
+.discovery-confirm { display: flex; gap: 8px; margin-top: 10px; }
+.discovery-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.discovery-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+/* care plan card (情境化微干预) */
+.care-plan-card h2 { margin-bottom: 4px; }
+.care-steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.care-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.care-step-num {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.care-plan-skip {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 10px 0 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+}
+.care-plan-rest {
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* care feedback */
+.care-feedback-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.care-feedback-btn {
+  flex: 1;
+  min-width: 80px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.care-feedback-btn:active { background: var(--accent-soft); }
+
 /* care lists */
 .care-list { display: flex; flex-direction: column; gap: 10px; }
 .care-item {

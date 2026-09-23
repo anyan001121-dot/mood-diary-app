@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -83,6 +83,12 @@
         </div>
       </div>
 
+      <div class="card safety-banner" id="safetyBanner" hidden>
+        <h3>最近几天，你持续记录到了比较低落的状态</h3>
+        <p class="muted small">不需要现在解决所有问题。如果这种状态持续，考虑和信任的人聊聊，或寻求专业的心理支持渠道，都是可以的。</p>
+        <button class="btn btn-ghost btn-block" id="safetyDismissBtn">知道了，继续记录</button>
+      </div>
+
       <div class="card" id="homeStreakCard">
         <div class="stat-row">
           <div class="stat">
@@ -102,8 +108,8 @@
 
       <div class="card">
         <h3>为你推荐</h3>
-        <p class="muted small" id="autoRecommendText">根据你最近的情绪状态和触发因素自动生成</p>
-        <button class="btn btn-primary btn-block" id="autoRecommendBtn">一键开始</button>
+        <p class="muted small" id="autoRecommendText">根据你最近的情绪状态和关联因素自动生成</p>
+        <button class="btn btn-primary btn-block" id="autoRecommendBtn">查看今天的小方案</button>
         <button class="btn btn-ghost btn-block" data-nav="care">自己看看全部方案</button>
       </div>
     </section>
@@ -133,7 +139,7 @@
         </div>
 
         <div class="field">
-          <label>可能的触发因素（可多选）</label>
+          <label>此刻可能相关的因素（可多选）</label>
           <div class="tag-picker" id="triggerPicker">
             <button type="button" class="tag-opt" data-tag="工作学业">工作/学业</button>
             <button type="button" class="tag-opt" data-tag="人际关系">人际关系</button>
@@ -162,6 +168,12 @@
     <!-- ============ 情绪洞察 ============ -->
     <section class="view" id="view-insight">
       <div class="card">
+        <h3>我发现的小规律</h3>
+        <p class="muted small">这些是记录中和情绪同时出现的关联，不代表因果——你可以告诉我们是否符合你的感觉</p>
+        <div id="discoveryCards" class="discovery-cards"></div>
+      </div>
+
+      <div class="card">
         <div class="card-title-row">
           <h3>情绪趋势</h3>
           <div class="segmented" id="trendRange">
@@ -188,21 +200,34 @@
       </div>
 
       <div class="card">
-        <h3>触发因素分析</h3>
-        <p class="muted small">按出现次数排序，条形颜色代表该因素出现时的平均情绪</p>
+        <h3>情绪关联分析</h3>
+        <p class="muted small">按出现次数排序，条形颜色代表该因素同时出现时的平均情绪；只是关联，不是原因</p>
         <div id="triggerAnalysis"></div>
       </div>
     </section>
 
     <!-- ============ 自我关怀 ============ -->
     <section class="view" id="view-care">
-      <div class="card">
-        <h2>自我关怀方案</h2>
-        <div id="careIntro" class="muted small"></div>
-        <button class="btn btn-primary btn-block" id="careAutoBtn">一键开始推荐方案</button>
+      <div class="card care-plan-card">
+        <h2 id="carePlanTitle">自我关怀方案</h2>
+        <p class="muted small" id="carePlanLead"></p>
+        <div class="care-steps" id="carePlanSteps"></div>
+        <button class="btn btn-primary btn-block" id="carePlanStartBtn">开始</button>
+        <button type="button" class="care-plan-skip" id="carePlanSkipBtn">我现在什么都不想做</button>
+        <p class="care-plan-rest muted small" id="carePlanRest" hidden>那今天先休息也可以。你已经完成了一次记录，这就足够了。</p>
       </div>
 
-      <div class="card">
+      <div class="card care-feedback-card" id="careFeedbackCard" hidden>
+        <h3>现在感觉怎么样？</h3>
+        <div class="care-feedback-row">
+          <button type="button" class="care-feedback-btn" data-value="better">好一点</button>
+          <button type="button" class="care-feedback-btn" data-value="same">差不多</button>
+          <button type="button" class="care-feedback-btn" data-value="worse">更糟</button>
+          <button type="button" class="care-feedback-btn" data-value="skip">不想回答</button>
+        </div>
+      </div>
+
+      <div class="card" id="breathingCard">
         <h3>呼吸练习</h3>
         <p class="muted small">跟随圆圈的扩张与收缩调整呼吸，帮助神经系统平静下来</p>
         <div class="breathing-wrap">
@@ -286,7 +311,7 @@
 
 </div>
 
-<script src="audio.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="audio.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

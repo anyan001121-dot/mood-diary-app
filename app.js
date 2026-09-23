@@ -46,6 +46,42 @@
     saveEntries(entries);
   }
 
+  // 自我关怀行动记录：每次呼吸/冥想练习完成后，记录做了什么、用户反馈如何，
+  // 用于之后生成"行为反馈"洞察（比如"呼吸练习对你有帮助的比例"）
+  const CARE_LOG_KEY = 'moodDiary.careLog.v1';
+  function loadCareLog() {
+    try {
+      const raw = localStorage.getItem(CARE_LOG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveCareLog(log) {
+    localStorage.setItem(CARE_LOG_KEY, JSON.stringify(log));
+  }
+  function addCareLogEntry(entry) {
+    const log = loadCareLog();
+    log.push(entry);
+    saveCareLog(log);
+    return entry;
+  }
+
+  // 洞察确认：用户对"这个发现符合你的感觉吗"的回应，key 形如 assoc:工作学业 / time:1-上午
+  const INSIGHT_FEEDBACK_KEY = 'moodDiary.insightFeedback.v1';
+  function loadInsightFeedback() {
+    try {
+      return JSON.parse(localStorage.getItem(INSIGHT_FEEDBACK_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function setInsightFeedback(key, value) {
+    const fb = loadInsightFeedback();
+    fb[key] = value;
+    localStorage.setItem(INSIGHT_FEEDBACK_KEY, JSON.stringify(fb));
+  }
+
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
@@ -267,6 +303,50 @@
     </svg>`;
   }
 
+  // ---------- safety ----------
+  // 产品定位是自我关怀工具，不是诊断工具：不判断抑郁/焦虑症，不给风险等级，
+  // 只在"单次很糟"和"连续多日低落"时给低压力的陪伴提示和求助方向。
+  function checkConsecutiveLowDays() {
+    const entries = loadEntries();
+    if (!entries.length) return 0;
+    const today = startOfDay(Date.now());
+    // 从"最近一次有记录的那天"开始往回数，而不是死板要求今天必须已经记录
+    let startOffset = -1;
+    for (let i = 0; i < 14; i++) {
+      const key = dayKey(today - i * 86400000);
+      if (entries.some(e => dayKey(e.ts) === key)) { startOffset = i; break; }
+    }
+    if (startOffset === -1) return 0;
+    let consecutiveDays = 0;
+    for (let i = startOffset; i < startOffset + 14; i++) {
+      const dayStart = today - i * 86400000;
+      const key = dayKey(dayStart);
+      const dayEntries = entries.filter(e => dayKey(e.ts) === key);
+      if (!dayEntries.length) break;
+      const avg = dayEntries.reduce((s, e) => s + e.mood, 0) / dayEntries.length;
+      if (avg <= 2) consecutiveDays++;
+      else break;
+    }
+    return consecutiveDays;
+  }
+
+  function renderSafetyBanner() {
+    const banner = document.getElementById('safetyBanner');
+    if (!banner) return;
+    const consecutive = checkConsecutiveLowDays();
+    const dismissedDate = localStorage.getItem('moodDiary.safetyPromptDate');
+    const todayStr = dayKey(Date.now());
+    banner.hidden = !(consecutive >= 3 && dismissedDate !== todayStr);
+  }
+
+  const safetyDismissBtn = document.getElementById('safetyDismissBtn');
+  if (safetyDismissBtn) {
+    safetyDismissBtn.addEventListener('click', () => {
+      localStorage.setItem('moodDiary.safetyPromptDate', dayKey(Date.now()));
+      document.getElementById('safetyBanner').hidden = true;
+    });
+  }
+
   // ---------- home ----------
   function renderHome() {
     const entries = loadEntries();
@@ -293,10 +373,12 @@
     const avg7 = withData.length ? (withData.reduce((s, d) => s + d.avg, 0) / withData.length) : null;
     document.getElementById('statAvg').textContent = avg7 ? avg7.toFixed(1) : '–';
 
-    // 自动推荐（首页）
-    const rec = buildAutoRecommendation();
-    document.getElementById('autoRecommendText').textContent = rec.text;
-    document.getElementById('autoRecommendBtn').textContent = rec.hasEntries ? '一键开始' : '去记录心情';
+    // 自动推荐（首页预览，完整的小方案在"关怀"页）
+    const plan = getCarePlan();
+    document.getElementById('autoRecommendText').textContent = plan.leadText;
+    document.getElementById('autoRecommendBtn').textContent = plan.tier === 'none' ? '去记录心情' : '查看今天的小方案';
+
+    renderSafetyBanner();
   }
 
   function recentMoodScore() {
@@ -427,7 +509,9 @@
       setTimeout(() => todaySlot.classList.remove('just-grown'), 650);
     }
     const bubble = document.getElementById('detailBubble');
-    document.getElementById('detailBubbleText').textContent = `记下了「${MOOD_META[score].label}」，感谢你花时间关照自己`;
+    document.getElementById('detailBubbleText').textContent = score === 1
+      ? '这一刻很难熬吧。不需要马上解决所有事，先陪自己待一会儿'
+      : `记下了「${MOOD_META[score].label}」，感谢你花时间关照自己`;
     bubble.hidden = false;
     clearTimeout(quickLogMood._hideTimer);
     quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 6000);
@@ -452,6 +536,145 @@
     showView('care');
   });
 
+  // ---------- discover：主动发现规律，而不是让用户自己看图 ----------
+  const DOW_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  function timeBucketName(hour) {
+    if (hour < 6) return '凌晨';
+    if (hour < 12) return '上午';
+    if (hour < 18) return '下午';
+    return '晚上';
+  }
+
+  // ① 事件关联：只描述"同时出现"，不说"导致"
+  function analyzeEventAssociation() {
+    const entries = loadEntries().filter(e => e.ts >= Date.now() - 14 * 86400000);
+    if (entries.length < 5) return null;
+    const stats = {};
+    entries.forEach(e => (e.tags || []).forEach(tag => {
+      if (!stats[tag]) stats[tag] = { count: 0, sum: 0, lowCount: 0 };
+      stats[tag].count++;
+      stats[tag].sum += e.mood;
+      if (e.mood <= 2) stats[tag].lowCount++;
+    }));
+    const overallAvg = entries.reduce((s, e) => s + e.mood, 0) / entries.length;
+    let best = null;
+    Object.entries(stats).forEach(([tag, s]) => {
+      if (s.count < 3) return;
+      const avg = s.sum / s.count;
+      if (avg < overallAvg - 0.4 && (!best || s.count > best.count)) {
+        best = { tag, count: s.count, lowCount: s.lowCount, avg };
+      }
+    });
+    return best;
+  }
+
+  // ② 时间规律：哪个"周几+时段"的平均情绪明显低于整体
+  function analyzeTimePattern() {
+    const entries = loadEntries().filter(e => e.ts >= Date.now() - 30 * 86400000);
+    if (entries.length < 10) return null;
+    const groups = {};
+    entries.forEach(e => {
+      const d = new Date(e.ts);
+      const key = d.getDay() + '-' + timeBucketName(d.getHours());
+      (groups[key] = groups[key] || []).push(e.mood);
+    });
+    const overallAvg = entries.reduce((s, e) => s + e.mood, 0) / entries.length;
+    let worst = null;
+    Object.entries(groups).forEach(([key, moods]) => {
+      if (moods.length < 3) return;
+      const avg = moods.reduce((a, b) => a + b, 0) / moods.length;
+      const diff = overallAvg - avg;
+      if (diff >= 0.8 && (!worst || diff > worst.diff)) {
+        const [dow, bucket] = key.split('-');
+        worst = { diff, avg, count: moods.length, dow: Number(dow), bucket };
+      }
+    });
+    return worst;
+  }
+
+  // ③ 行为反馈：基于用户对自我关怀行动的真实反馈，而不是假设所有人都适合同一种方式
+  const CARE_KIND_LABELS = { breathing: '呼吸练习', meditation: '冥想练习' };
+  function analyzeBehaviorFeedback() {
+    const log = loadCareLog().filter(e => e.feedback && e.feedback !== 'skip');
+    const byKind = {};
+    log.forEach(e => {
+      if (!byKind[e.kind]) byKind[e.kind] = { total: 0, better: 0 };
+      byKind[e.kind].total++;
+      if (e.feedback === 'better') byKind[e.kind].better++;
+    });
+    let best = null;
+    Object.entries(byKind).forEach(([kind, s]) => {
+      if (s.total < 3) return;
+      if (!best || s.total > best.total) best = { kind, total: s.total, pct: Math.round((s.better / s.total) * 100) };
+    });
+    return best;
+  }
+
+  function renderDiscoveryCards() {
+    const el = document.getElementById('discoveryCards');
+    if (!el) return;
+    const fb = loadInsightFeedback();
+    const cards = [];
+
+    const assoc = analyzeEventAssociation();
+    if (assoc) {
+      const key = 'assoc:' + assoc.tag;
+      cards.push({
+        key,
+        text: `最近两周，「${assoc.tag}」出现在 ${assoc.count} 次记录里，其中 ${assoc.lowCount} 次情绪偏低。涉及「${assoc.tag}」的记录，平均情绪比其他记录更低。`,
+        confirmable: true,
+        value: fb[key],
+      });
+    }
+
+    const timePattern = analyzeTimePattern();
+    if (timePattern) {
+      const key = `time:${timePattern.dow}-${timePattern.bucket}`;
+      cards.push({
+        key,
+        text: `最近一个月，你${DOW_NAMES[timePattern.dow]}${timePattern.bucket}的情绪，通常比其他时间更低一些。`,
+        confirmable: true,
+        value: fb[key],
+      });
+    }
+
+    const behavior = analyzeBehaviorFeedback();
+    if (behavior) {
+      cards.push({
+        key: 'behavior:' + behavior.kind,
+        text: `在完成${CARE_KIND_LABELS[behavior.kind] || behavior.kind}后，你有 ${behavior.pct}% 的记录反馈"好一点"。`,
+        confirmable: false,
+      });
+    }
+
+    if (!cards.length) {
+      el.innerHTML = '<div class="history-empty">继续记录几次，我们就能帮你发现更多关于自己的小规律。</div>';
+      return;
+    }
+
+    el.innerHTML = cards.map(c => `
+      <div class="discovery-card">
+        <p>${c.text}</p>
+        ${c.confirmable ? `
+          <div class="discovery-confirm" data-key="${c.key}">
+            <button type="button" class="discovery-btn ${c.value === 'yes' ? 'selected' : ''}" data-value="yes">符合</button>
+            <button type="button" class="discovery-btn ${c.value === 'unsure' ? 'selected' : ''}" data-value="unsure">不确定</button>
+            <button type="button" class="discovery-btn ${c.value === 'no' ? 'selected' : ''}" data-value="no">不符合</button>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.discovery-confirm').forEach(row => {
+      row.addEventListener('click', (e) => {
+        const btn = e.target.closest('.discovery-btn');
+        if (!btn) return;
+        setInsightFeedback(row.dataset.key, btn.dataset.value);
+        row.querySelectorAll('.discovery-btn').forEach(b => b.classList.toggle('selected', b === btn));
+      });
+    });
+  }
+
   // ---------- insight ----------
   let trendRange = 7;
   document.getElementById('trendRange').addEventListener('click', (e) => {
@@ -463,6 +686,7 @@
   });
 
   function renderInsight() {
+    renderDiscoveryCards();
     document.getElementById('insightTrend').innerHTML = buildTrendSVG(dailyAverages(trendRange));
     renderCalendar();
     renderTriggerAnalysis();
@@ -543,23 +767,10 @@
     { title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
   ];
 
-  // 情绪触发因素 -> 具体调节方案的映射：分析最近低落情绪最常伴随哪个标签，
-  // 直接自动配好"冥想 + 音乐"组合，而不是让用户自己从列表里翻找。
   const MUSIC_LABELS = { pad: '暖光序曲', rain: '雨声白噪音', bowl: '颂钵回响' };
-  const TRIGGER_INTERVENTIONS = {
-    '工作学业': { medIndex: 0, music: 'pad' },
-    '财务':     { medIndex: 0, music: 'pad' },
-    '社交媒体': { medIndex: 0, music: 'rain' },
-    '人际关系': { medIndex: 2, music: 'rain' },
-    '家庭':     { medIndex: 2, music: 'rain' },
-    '独处':     { medIndex: 2, music: 'bowl' },
-    '健康':     { medIndex: 1, music: 'bowl' },
-    '睡眠':     { medIndex: 1, music: 'bowl' },
-    '天气':     { medIndex: 1, music: 'rain' },
-    '其他':     { medIndex: 0, music: 'pad' },
-  };
 
-  // 找出最近记录里，情绪低落时最常出现的触发因素标签
+  // 找出最近记录里，情绪低落时最常同时出现的标签。
+  // 注意：这只说明"同时出现"，不代表因果——文案上也只说"常常伴随"，不说"导致"。
   function analyzeTopTrigger() {
     const entries = loadEntries();
     if (!entries.length) return null;
@@ -574,52 +785,133 @@
     return sorted.length ? sorted[0][0] : null;
   }
 
-  // 生成一套自动推荐（不需要用户自己挑冥想类型或音乐曲目）
-  function buildAutoRecommendation() {
+  // 根据当前状态判断"情境层级"：不是所有低落都一样，极度耗竭 / 紧绷焦虑 / 疲惫，
+  // 需要的小行动不同——这是"情境化微干预"的核心判断。
+  function determineCareTier() {
     const entries = loadEntries();
-    if (!entries.length) {
-      return { hasEntries: false, text: '先记录一次此刻的心情，我们就能根据你的状态和触发因素，自动帮你选一套调节方案。' };
-    }
-
-    const score = recentMoodScore();
+    if (!entries.length) return { tier: 'none', trigger: null, latest: null };
+    const latest = entries.slice().sort((a, b) => b.ts - a.ts)[0];
     const topTrigger = analyzeTopTrigger();
-    const inter = (topTrigger && TRIGGER_INTERVENTIONS[topTrigger]) || TRIGGER_INTERVENTIONS['其他'];
-    const med = MEDITATIONS[inter.medIndex];
-    const musicLabel = MUSIC_LABELS[inter.music];
+    if (topTrigger === '睡眠' || topTrigger === '健康') return { tier: 'tired', trigger: topTrigger, latest };
+    if (latest.mood <= 2 && latest.intensity >= 4) return { tier: 'depleted', trigger: topTrigger, latest };
+    if (latest.mood <= 2) return { tier: 'anxious', trigger: topTrigger, latest };
+    if (latest.mood >= 4) return { tier: 'positive', trigger: topTrigger, latest };
+    return { tier: 'neutral', trigger: topTrigger, latest };
+  }
 
-    let text;
-    if (topTrigger) {
-      text = `最近的记录里，「${topTrigger}」常常伴随着这样的心情。为你自动搭配了：${med.title} + ${musicLabel}。`;
-    } else if (score != null && score <= 2) {
-      text = `看起来最近有点低落。为你自动搭配了：${med.title} + ${musicLabel}，一键就能开始。`;
+  const CARE_PLANS = {
+    depleted: {
+      title: '现在不用解决所有事情',
+      lead: () => '看起来这一刻消耗很大，先别急着振作。',
+      steps: ['跟着练习，完成4轮慢呼吸', '离开屏幕3分钟，喝一点水', '只写下明天最小需要做的一件事'],
+      action: { type: 'breathing' },
+      actionLabel: '开始呼吸练习',
+    },
+    anxious: {
+      title: '先让自己稳下来一点',
+      lead: (trigger) => trigger ? `最近的记录里，「${trigger}」常常伴随着这样的心情，先不用急着解决它。` : '看起来这一刻有点紧绷。',
+      steps: ['跟随呼吸练习，做4轮慢呼吸', '说出3件你此刻能看到的东西，把注意力拉回身边', '把下一步拆成一个最小的动作'],
+      action: { type: 'breathing' },
+      actionLabel: '开始呼吸练习',
+    },
+    tired: {
+      title: '先歇一歇，别急着振作',
+      lead: () => '最近的记录里，疲惫感比较明显。',
+      steps: ['花几分钟做一次身体扫描放松', '放一段舒缓的音乐', '今晚尽量早一点让自己躺下'],
+      action: { type: 'meditation', medIndex: 1, music: 'bowl' },
+      actionLabel: '开始身体扫描',
+    },
+    positive: {
+      title: '今天感觉不错',
+      lead: () => '要不要记下一件让你开心的小事？',
+      steps: ['留意此刻是什么让你感觉好', '写下这件小事，哪怕很小', '这会成为你的情绪存款'],
+      action: { type: 'note' },
+      actionLabel: '写下这件小事',
+    },
+    neutral: {
+      title: '花几分钟，陪陪自己',
+      lead: () => '不好不坏，也是很真实的状态。',
+      steps: ['跟随一次正念呼吸', '留意此刻身体的感觉', '不用急着评价这一刻'],
+      action: { type: 'meditation', medIndex: 0, music: 'pad' },
+      actionLabel: '开始正念呼吸',
+    },
+    none: {
+      title: '先记录一次此刻的心情',
+      lead: () => '记录之后，我们就能为你自动搭配合适的小方案。',
+      steps: [],
+      action: { type: 'home' },
+      actionLabel: '去记录心情',
+    },
+  };
+
+  function getCarePlan() {
+    const ctx = determineCareTier();
+    const plan = CARE_PLANS[ctx.tier];
+    return Object.assign({}, plan, { tier: ctx.tier, trigger: ctx.trigger, leadText: plan.lead(ctx.trigger) });
+  }
+
+  let pendingCareContext = null;
+
+  function showCareFeedback() {
+    if (!pendingCareContext) return;
+    const card = document.getElementById('careFeedbackCard');
+    card.hidden = false;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.querySelectorAll('.care-feedback-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (pendingCareContext) {
+        addCareLogEntry({
+          id: uid(), ts: Date.now(),
+          kind: pendingCareContext.kind, tier: pendingCareContext.tier, trigger: pendingCareContext.trigger,
+          feedback: btn.dataset.value,
+        });
+      }
+      document.getElementById('careFeedbackCard').hidden = true;
+      pendingCareContext = null;
+    });
+  });
+
+  function startCarePlanAction() {
+    const plan = getCarePlan();
+    if (plan.action.type === 'breathing') {
+      pendingCareContext = { tier: plan.tier, trigger: plan.trigger, kind: 'breathing' };
+      document.getElementById('breathingCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!breathRunning) startBreathing();
+    } else if (plan.action.type === 'meditation') {
+      openMeditationSession(plan.action.medIndex, plan.action.music);
+    } else if (plan.action.type === 'note') {
+      const entries = loadEntries().slice().sort((a, b) => b.ts - a.ts);
+      if (entries.length) openEntryEditor(entries[0].id);
     } else {
-      text = `为你自动搭配了现在适合的调节方案：${med.title} + ${musicLabel}。`;
-    }
-
-    return { hasEntries: true, text, medIndex: inter.medIndex, music: inter.music };
-  }
-
-  function startAutoRecommendation() {
-    const rec = buildAutoRecommendation();
-    if (!rec.hasEntries) {
       showView('home');
-      return;
-    }
-    showView('care');
-    openMeditationSession(rec.medIndex);
-    if (window.AmbientAudio) {
-      window.AmbientAudio.play(rec.music);
-      syncMusicUI();
     }
   }
 
-  document.getElementById('autoRecommendBtn').addEventListener('click', startAutoRecommendation);
-  document.getElementById('careAutoBtn').addEventListener('click', startAutoRecommendation);
+  document.getElementById('carePlanStartBtn').addEventListener('click', startCarePlanAction);
+  document.getElementById('carePlanSkipBtn').addEventListener('click', () => {
+    document.getElementById('carePlanRest').hidden = false;
+  });
+
+  function renderCarePlanCard() {
+    const plan = getCarePlan();
+    document.getElementById('carePlanTitle').textContent = plan.title;
+    document.getElementById('carePlanLead').textContent = plan.leadText;
+    document.getElementById('carePlanSteps').innerHTML = plan.steps.length
+      ? plan.steps.map((s, i) => `<div class="care-step"><span class="care-step-num">${i + 1}</span><span>${s}</span></div>`).join('')
+      : '';
+    document.getElementById('carePlanStartBtn').textContent = plan.actionLabel;
+    document.getElementById('carePlanSkipBtn').hidden = plan.tier === 'none';
+    document.getElementById('carePlanRest').hidden = true;
+    return plan;
+  }
+
+  document.getElementById('autoRecommendBtn').addEventListener('click', () => showView('care'));
 
   function renderCare() {
-    const rec = buildAutoRecommendation();
-    document.getElementById('careIntro').textContent = rec.text;
-    document.getElementById('careAutoBtn').hidden = !rec.hasEntries;
+    renderCarePlanCard();
+    document.getElementById('careFeedbackCard').hidden = true;
 
     document.getElementById('meditationList').innerHTML = MEDITATIONS.map((m, i) => `
       <div class="care-item">
@@ -667,7 +959,7 @@
     if (!btn) return;
     breathMode = btn.dataset.mode;
     document.querySelectorAll('#breathModes .seg-opt').forEach(el => el.classList.toggle('active', el === btn));
-    stopBreathing();
+    stopBreathing({ silent: true });
   });
 
   function stepBreath() {
@@ -686,9 +978,14 @@
     breathRunning = true;
     breathStepIndex = 0;
     document.getElementById('breathToggle').textContent = '结束练习';
+    if (!pendingCareContext) {
+      const ctx = determineCareTier();
+      pendingCareContext = { tier: ctx.tier, trigger: ctx.trigger, kind: 'breathing' };
+    }
     stepBreath();
   }
-  function stopBreathing() {
+  function stopBreathing(opts) {
+    const wasRunning = breathRunning;
     breathRunning = false;
     clearTimeout(breathTimer);
     const circle = document.getElementById('breathCircle');
@@ -696,6 +993,9 @@
     circle.style.transform = 'scale(1)';
     document.getElementById('breathLabel').textContent = '开始';
     document.getElementById('breathToggle').textContent = '开始练习';
+    if (wasRunning && (!opts || !opts.silent)) {
+      showCareFeedback();
+    }
   }
   document.getElementById('breathToggle').addEventListener('click', () => {
     if (breathRunning) stopBreathing();
@@ -751,11 +1051,16 @@
   let medGuidanceInterval = null;
   let medElapsedSeconds = 0;
 
-  function openMeditationSession(index) {
+  function openMeditationSession(index, music) {
     const med = MEDITATIONS[index];
     if (!med) return;
     document.getElementById('meditationCard').hidden = true;
     document.getElementById('meditationSession').hidden = false;
+
+    if (!pendingCareContext) {
+      const ctx = determineCareTier();
+      pendingCareContext = { tier: ctx.tier, trigger: ctx.trigger, kind: 'meditation' };
+    }
 
     medElapsedSeconds = 0;
     document.getElementById('medTimer').textContent = '00:00';
@@ -783,7 +1088,7 @@
     }, 1000);
 
     if (window.AmbientAudio && !window.AmbientAudio.isPlaying()) {
-      window.AmbientAudio.play('pad');
+      window.AmbientAudio.play(music || 'pad');
       syncMusicUI();
     }
   }
@@ -793,6 +1098,7 @@
     clearInterval(medGuidanceInterval);
     document.getElementById('meditationSession').hidden = true;
     document.getElementById('meditationCard').hidden = false;
+    showCareFeedback();
   }
 
   document.getElementById('meditationList').addEventListener('click', (e) => {
