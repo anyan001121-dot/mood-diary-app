@@ -288,13 +288,10 @@
     const avg7 = withData.length ? (withData.reduce((s, d) => s + d.avg, 0) / withData.length) : null;
     document.getElementById('statAvg').textContent = avg7 ? avg7.toFixed(1) : '–';
 
-    // recommend preview
-    const recent = recentMoodScore();
-    const rec = getRecommendations(recent);
-    const previewEl = document.getElementById('homeRecommend');
-    previewEl.innerHTML = rec.quick.map(r => `
-      <div class="recommend-item"><img class="ri-emoji" src="${r.icon}" alt=""><span>${r.text}</span></div>
-    `).join('');
+    // 自动推荐（首页）
+    const rec = buildAutoRecommendation();
+    document.getElementById('autoRecommendText').textContent = rec.text;
+    document.getElementById('autoRecommendBtn').textContent = rec.hasEntries ? '一键开始' : '去记录心情';
   }
 
   function recentMoodScore() {
@@ -539,44 +536,83 @@
     { title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
   ];
 
-  function getRecommendations(score) {
-    // score: null | 1-5
-    let tier;
-    if (score == null) tier = 'none';
-    else if (score <= 2) tier = 'low';
-    else if (score < 4) tier = 'mid';
-    else tier = 'high';
+  // 情绪触发因素 -> 具体调节方案的映射：分析最近低落情绪最常伴随哪个标签，
+  // 直接自动配好"冥想 + 音乐"组合，而不是让用户自己从列表里翻找。
+  const MUSIC_LABELS = { pad: '暖光序曲', rain: '雨声白噪音', bowl: '颂钵回响' };
+  const TRIGGER_INTERVENTIONS = {
+    '工作学业': { medIndex: 0, music: 'pad' },
+    '财务':     { medIndex: 0, music: 'pad' },
+    '社交媒体': { medIndex: 0, music: 'rain' },
+    '人际关系': { medIndex: 2, music: 'rain' },
+    '家庭':     { medIndex: 2, music: 'rain' },
+    '独处':     { medIndex: 2, music: 'bowl' },
+    '健康':     { medIndex: 1, music: 'bowl' },
+    '睡眠':     { medIndex: 1, music: 'bowl' },
+    '天气':     { medIndex: 1, music: 'rain' },
+    '其他':     { medIndex: 0, music: 'pad' },
+  };
 
-    const introMap = {
-      none: '还没有记录，先去记录一次心情，我们会根据你的状态给出更贴合的建议。',
-      low: '看起来最近的情绪有点低落。先别急着"解决"它，试试下面的呼吸练习或安静地听一段音乐，给自己一点缓冲的空间。',
-      mid: '情绪状态平平，不好不坏。这正是适合做一点小事，主动照顾自己一下的时候。',
-      high: '最近的状态还不错，试试用运动或感恩练习延续这份好心情，也给未来的自己攒点"情绪存款"。',
-    };
+  // 找出最近记录里，情绪低落时最常出现的触发因素标签
+  function analyzeTopTrigger() {
+    const entries = loadEntries();
+    if (!entries.length) return null;
+    const recentWindow = entries.filter(e => e.ts >= Date.now() - 30 * 86400000);
+    const pool = recentWindow.length ? recentWindow : entries;
+    const lowEntries = pool.filter(e => e.mood <= 2);
+    const source = lowEntries.length ? lowEntries : pool;
 
-    const quickMap = {
-      none: [{ icon: 'assets/icon-tool-journal.png', text: '先记录一次今天的心情' }],
-      low: [
-        { icon: 'assets/icon-tool-meditation.png', text: '3分钟箱式呼吸，平复神经紧张' },
-        { icon: 'assets/icon-tool-music.png', text: '听一段自然白噪音，让自己静下来' },
-      ],
-      mid: [
-        { icon: 'assets/icon-tool-exercise.png', text: '出门走10分钟，换个环境' },
-        { icon: 'assets/icon-tool-journal.png', text: '写下今天值得感激的一件小事' },
-      ],
-      high: [
-        { icon: 'assets/icon-tool-exercise.png', text: '趁状态好，做一次短时运动' },
-        { icon: 'assets/icon-tool-music.png', text: '收藏一份能代表此刻心情的歌单' },
-      ],
-    };
-
-    return { tier, intro: introMap[tier], quick: quickMap[tier] };
+    const counts = {};
+    source.forEach(e => (e.tags || []).forEach(tag => { counts[tag] = (counts[tag] || 0) + 1; }));
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted.length ? sorted[0][0] : null;
   }
 
-  function renderCare() {
+  // 生成一套自动推荐（不需要用户自己挑冥想类型或音乐曲目）
+  function buildAutoRecommendation() {
+    const entries = loadEntries();
+    if (!entries.length) {
+      return { hasEntries: false, text: '先记录一次此刻的心情，我们就能根据你的状态和触发因素，自动帮你选一套调节方案。' };
+    }
+
     const score = recentMoodScore();
-    const rec = getRecommendations(score);
-    document.getElementById('careIntro').textContent = rec.intro;
+    const topTrigger = analyzeTopTrigger();
+    const inter = (topTrigger && TRIGGER_INTERVENTIONS[topTrigger]) || TRIGGER_INTERVENTIONS['其他'];
+    const med = MEDITATIONS[inter.medIndex];
+    const musicLabel = MUSIC_LABELS[inter.music];
+
+    let text;
+    if (topTrigger) {
+      text = `最近的记录里，「${topTrigger}」常常伴随着这样的心情。为你自动搭配了：${med.title} + ${musicLabel}。`;
+    } else if (score != null && score <= 2) {
+      text = `看起来最近有点低落。为你自动搭配了：${med.title} + ${musicLabel}，一键就能开始。`;
+    } else {
+      text = `为你自动搭配了现在适合的调节方案：${med.title} + ${musicLabel}。`;
+    }
+
+    return { hasEntries: true, text, medIndex: inter.medIndex, music: inter.music };
+  }
+
+  function startAutoRecommendation() {
+    const rec = buildAutoRecommendation();
+    if (!rec.hasEntries) {
+      showView('home');
+      return;
+    }
+    showView('care');
+    openMeditationSession(rec.medIndex);
+    if (window.AmbientAudio) {
+      window.AmbientAudio.play(rec.music);
+      syncMusicUI();
+    }
+  }
+
+  document.getElementById('autoRecommendBtn').addEventListener('click', startAutoRecommendation);
+  document.getElementById('careAutoBtn').addEventListener('click', startAutoRecommendation);
+
+  function renderCare() {
+    const rec = buildAutoRecommendation();
+    document.getElementById('careIntro').textContent = rec.text;
+    document.getElementById('careAutoBtn').hidden = !rec.hasEntries;
 
     document.getElementById('meditationList').innerHTML = MEDITATIONS.map((m, i) => `
       <div class="care-item">
