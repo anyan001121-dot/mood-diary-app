@@ -526,15 +526,15 @@
     renderGarden();
     const days7 = dailyAverages(7);
 
-    // streak
-    let streak = 0;
-    for (let i = 0; i < 365; i++) {
-      const key = dayKey(Date.now() - i * 86400000);
-      const has = entries.some(e => dayKey(e.ts) === key);
-      if (has) streak++;
-      else { if (i === 0) continue; break; }
-    }
-    document.getElementById('statStreak').textContent = streak;
+    // 这是情绪关怀产品，不是打卡类应用："连续 X 天"这种一断就归零的计数，
+    // 断签那天打开只会看到"0"，潜台词是"你失败了"，和产品调性冲突。
+    // 换成"这个月照顾了自己几天"——按自然月计数，不会因为某天没记录就清零。
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const careDaysThisMonth = new Set(entries.filter(e => e.ts >= monthStart).map(e => dayKey(e.ts))).size;
+    document.getElementById('careDaysLine').textContent = careDaysThisMonth > 0
+      ? `🌱 这个月，你已经照顾了自己 ${careDaysThisMonth} 天`
+      : '🌱 这个月还没有记录，现在开始也不晚';
     document.getElementById('statTotal').textContent = entries.length;
     const withData = days7.filter(d => d.avg != null);
     const avg7 = withData.length ? (withData.reduce((s, d) => s + d.avg, 0) / withData.length) : null;

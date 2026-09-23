@@ -589,6 +589,13 @@ main {
 .stat-num { font-size: 22px; font-weight: 700; color: var(--accent-deep); }
 .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
+.care-days-line {
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+
 /* mood picker */
 .field { margin-bottom: 16px; }
 .field:last-child { margin-bottom: 0; }
