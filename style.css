@@ -367,6 +367,23 @@ main {
   60%  { transform: scale(1.25); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
+.day-slot.just-grown::before {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,195,74,0.6), rgba(139,195,74,0) 70%);
+  animation: soilPulse 0.7s ease;
+}
+@keyframes soilPulse {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.3); }
+  40%  { opacity: 1; transform: translateX(-50%) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1); }
+}
 
 .garden-prompt {
   text-align: center;
@@ -481,24 +498,50 @@ main {
   background: var(--accent-soft);
   color: var(--text);
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 16px 16px 14px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
 }
-.detail-bubble button {
-  background: var(--accent);
-  color: var(--accent-contrast);
+.detail-bubble-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  opacity: 0;
+}
+.detail-bubble.anim .detail-bubble-text {
+  animation: bubbleFadeUp 0.5s ease 0.2s forwards;
+}
+.detail-bubble-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+}
+.detail-bubble.anim .detail-bubble-actions {
+  animation: bubbleFadeUp 0.5s ease 0.6s forwards;
+}
+.detail-bubble-actions button {
+  flex: 1;
   border: none;
   border-radius: 10px;
-  padding: 7px 12px;
-  font-size: 12px;
+  padding: 10px 8px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  white-space: nowrap;
+}
+.detail-bubble-actions button#detailBubbleMoreBtn {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.detail-bubble-actions button#detailBubbleDoneBtn {
+  background: transparent;
+  color: var(--accent-deep);
+}
+@keyframes bubbleFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .card-title-row {
@@ -571,6 +614,76 @@ main {
 .mood-opt.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 
 input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+/* check-in: compact mood pill at the top of the progressive form */
+.checkin-mood-pill { flex: 1; min-width: 0; }
+.checkin-mood-pill .mood-picker { gap: 4px; }
+.checkin-mood-pill .mood-opt {
+  padding: 6px 2px;
+  border-radius: 10px;
+  gap: 2px;
+  border-width: 1.5px;
+}
+.checkin-mood-pill .mood-opt .mood-emoji { width: 20px; height: 20px; }
+.checkin-mood-pill .mood-opt span:last-child { font-size: 10px; }
+
+.checkin-steps { display: flex; justify-content: center; gap: 6px; margin: 2px 0 16px; }
+.checkin-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.checkin-step-dot.active { background: var(--accent); transform: scale(1.3); }
+.checkin-step-dot.done { background: var(--accent-soft); }
+
+.checkin-step { animation: checkinStepIn 0.3s ease; }
+@keyframes checkinStepIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.checkin-question {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 18px;
+  text-align: center;
+}
+
+.intensity-dots { display: flex; justify-content: space-between; gap: 8px; padding: 0 6px; }
+.intensity-dot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 0;
+}
+.intensity-dot span {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  transition: all 0.15s ease;
+}
+.intensity-dot small { font-size: 11px; color: var(--text-muted); }
+.intensity-dot.selected span {
+  border-color: var(--accent);
+  background: var(--accent);
+  transform: scale(1.15);
+}
+.intensity-dot.selected small { color: var(--accent-deep); font-weight: 600; }
+
+.checkin-actions { display: flex; gap: 8px; margin-top: 18px; }
+.checkin-actions .btn { flex: 1; padding: 12px 10px; font-size: 14px; }
 
 .tag-picker { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag-opt {

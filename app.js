@@ -127,15 +127,18 @@
     if (navEl) showView(navEl.dataset.nav);
   });
 
-  // ---------- log form state ----------
+  // ---------- log form state：渐进式 check-in（强度 → 关联 → 一句话）----------
   let selectedMood = null;
+  let selectedIntensity = 3;
   const selectedTags = new Set();
+  let checkinStep = 1;
 
   document.getElementById('moodPicker').addEventListener('click', (e) => {
     const btn = e.target.closest('.mood-opt');
     if (!btn) return;
     selectedMood = Number(btn.dataset.mood);
     document.querySelectorAll('.mood-opt').forEach(el => el.classList.toggle('selected', el === btn));
+    updateCheckinQuestions();
   });
 
   document.getElementById('triggerPicker').addEventListener('click', (e) => {
@@ -146,19 +149,62 @@
     else { selectedTags.add(tag); btn.classList.add('selected'); }
   });
 
-  const intensityInput = document.getElementById('intensity');
-  intensityInput.addEventListener('input', () => {
-    document.getElementById('intensityVal').textContent = intensityInput.value;
+  document.getElementById('intensityDots').addEventListener('click', (e) => {
+    const btn = e.target.closest('.intensity-dot');
+    if (!btn) return;
+    selectedIntensity = Number(btn.dataset.value);
+    document.querySelectorAll('.intensity-dot').forEach(el => el.classList.toggle('selected', el === btn));
+    setTimeout(() => showCheckinStep(2), 220);
   });
+
+  // 关联因素问题 / 一句话占位符都根据当前心情动态变化，而不是一句固定文案
+  function factorQuestionFor(mood) {
+    if (mood >= 4) return '今天这份好心情，好像跟什么有关？';
+    if (mood === 3) return '今天的感觉，好像更多和什么有关？';
+    return '今天的不舒服，好像更多来自哪里？';
+  }
+  function notePlaceholderFor(mood, tags) {
+    if (mood <= 2) {
+      return tags.length ? '今天最让你累的是什么？' : '不需要整理好语言，想到什么就写什么。';
+    }
+    if (mood >= 4) return '今天有什么开心的瞬间？';
+    return '有什么想记下的吗？';
+  }
+  function updateCheckinQuestions() {
+    if (!selectedMood) return;
+    document.getElementById('checkinFactorQuestion').textContent = factorQuestionFor(selectedMood);
+    document.getElementById('note').placeholder = notePlaceholderFor(selectedMood, Array.from(selectedTags));
+  }
+
+  function showCheckinStep(n) {
+    checkinStep = n;
+    [1, 2, 3].forEach(i => {
+      document.getElementById('checkinStep' + i).hidden = i !== n;
+    });
+    document.querySelectorAll('.checkin-step-dot').forEach(dot => {
+      const step = Number(dot.dataset.step);
+      dot.classList.toggle('active', step === n);
+      dot.classList.toggle('done', step < n);
+    });
+    if (n === 2 || n === 3) updateCheckinQuestions();
+  }
+
+  document.getElementById('checkinStep2Back').addEventListener('click', () => showCheckinStep(1));
+  document.getElementById('checkinStep2Skip').addEventListener('click', () => showCheckinStep(3));
+  document.getElementById('checkinStep2Next').addEventListener('click', () => showCheckinStep(3));
+  document.getElementById('checkinStep3Back').addEventListener('click', () => showCheckinStep(2));
+  document.getElementById('checkinStep3Skip').addEventListener('click', () => saveCheckinEntry());
 
   function resetLogForm() {
     selectedMood = null;
+    selectedIntensity = 3;
     selectedTags.clear();
     document.querySelectorAll('.mood-opt').forEach(el => el.classList.remove('selected'));
     document.querySelectorAll('.tag-opt').forEach(el => el.classList.remove('selected'));
-    intensityInput.value = 3;
-    document.getElementById('intensityVal').textContent = '3';
+    document.querySelectorAll('.intensity-dot').forEach(el => el.classList.remove('selected'));
     document.getElementById('note').value = '';
+    document.getElementById('note').placeholder = '发生了什么？此刻脑子里在想什么？';
+    showCheckinStep(1);
   }
 
   function openEntryEditor(entryId) {
@@ -166,15 +212,16 @@
     if (!entry) return;
     editingEntryId = entryId;
     selectedMood = entry.mood;
+    selectedIntensity = entry.intensity;
     selectedTags.clear();
     (entry.tags || []).forEach(t => selectedTags.add(t));
     document.querySelectorAll('.mood-opt').forEach(el => el.classList.toggle('selected', Number(el.dataset.mood) === entry.mood));
     document.querySelectorAll('.tag-opt').forEach(el => el.classList.toggle('selected', selectedTags.has(el.dataset.tag)));
-    intensityInput.value = entry.intensity;
-    document.getElementById('intensityVal').textContent = entry.intensity;
+    document.querySelectorAll('.intensity-dot').forEach(el => el.classList.toggle('selected', Number(el.dataset.value) === entry.intensity));
     document.getElementById('note').value = entry.note || '';
-    document.getElementById('logTitle').textContent = '补充细节';
     document.getElementById('logDeleteBtn').hidden = false;
+    showCheckinStep(1);
+    updateCheckinQuestions();
     showView('log');
   }
 
@@ -194,15 +241,16 @@
     }
   });
 
-  document.getElementById('saveEntryBtn').addEventListener('click', () => {
+  function saveCheckinEntry() {
     if (!selectedMood) {
-      document.getElementById('moodPicker').style.outline = '2px solid var(--danger)';
-      setTimeout(() => { document.getElementById('moodPicker').style.outline = ''; }, 900);
+      showCheckinStep(1);
+      document.getElementById('checkinMoodPill').style.outline = '2px solid var(--danger)';
+      setTimeout(() => { document.getElementById('checkinMoodPill').style.outline = ''; }, 900);
       return;
     }
     const fields = {
       mood: selectedMood,
-      intensity: Number(intensityInput.value),
+      intensity: selectedIntensity,
       tags: Array.from(selectedTags),
       note: document.getElementById('note').value.trim(),
     };
@@ -226,7 +274,9 @@
     setTimeout(() => { confirmEl.hidden = true; }, 2200);
 
     showView('home');
-  });
+  }
+
+  document.getElementById('saveEntryBtn').addEventListener('click', saveCheckinEntry);
 
   // ---------- analytics helpers ----------
   function dailyAverages(numDays) {
@@ -415,10 +465,7 @@
     const avg7 = withData.length ? (withData.reduce((s, d) => s + d.avg, 0) / withData.length) : null;
     document.getElementById('statAvg').textContent = avg7 ? avg7.toFixed(1) : '–';
 
-    // 自动推荐（首页预览，完整的小方案在"关怀"页）
-    const plan = getCarePlan();
-    document.getElementById('autoRecommendText').textContent = plan.homeText;
-    document.getElementById('autoRecommendBtn').textContent = plan.tier === 'none' ? '去记录心情' : '查看今天的小方案';
+    renderHomeCareCard();
 
     renderSafetyBanner();
     renderBackupReminder();
@@ -565,6 +612,16 @@
     renderGarden();
   });
 
+  // 记录情绪 = 种下一朵花：这是产品最有仪式感的一次交互，反馈需要配得上这个隐喻，
+  // 而不是一句轻描淡写的"记下了"。
+  const PLANT_MESSAGES = {
+    5: '今天的好心情，已经种下来了。',
+    4: '今天这份不错的心情，也被好好记在这里了。',
+    3: '普通的一天，也值得留下一点痕迹。',
+    2: '今天的低落，也被好好放在这里了。',
+    1: '今天不用急着变好，先把这一刻放在这里。',
+  };
+
   function quickLogMood(score) {
     const entry = { id: uid(), ts: Date.now(), mood: score, intensity: 3, tags: [], note: '' };
     addEntry(entry);
@@ -577,15 +634,17 @@
     const todaySlot = document.querySelector('.day-slot.today-slot');
     if (todaySlot) {
       todaySlot.classList.add('just-grown');
-      setTimeout(() => todaySlot.classList.remove('just-grown'), 650);
+      setTimeout(() => todaySlot.classList.remove('just-grown'), 700);
     }
+
     const bubble = document.getElementById('detailBubble');
-    document.getElementById('detailBubbleText').textContent = score === 1
-      ? '这一刻很难熬吧。不需要马上解决所有事，先陪自己待一会儿'
-      : `记下了「${MOOD_META[score].label}」，感谢你花时间关照自己`;
+    document.getElementById('detailBubbleText').textContent = PLANT_MESSAGES[score];
     bubble.hidden = false;
+    bubble.classList.remove('anim');
+    void bubble.offsetWidth; // 强制重排，让淡入动画每次都能重新播放
+    bubble.classList.add('anim');
     clearTimeout(quickLogMood._hideTimer);
-    quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 6000);
+    quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 9000);
 
     if (total > 0 && total % GARDEN_MILESTONE === 0) {
       celebrateMilestone();
@@ -598,9 +657,12 @@
     quickLogMood(Number(btn.dataset.mood));
   });
 
-  document.getElementById('detailBubbleBtn').addEventListener('click', () => {
+  document.getElementById('detailBubbleMoreBtn').addEventListener('click', () => {
     document.getElementById('detailBubble').hidden = true;
     if (lastQuickEntryId) openEntryEditor(lastQuickEntryId);
+  });
+  document.getElementById('detailBubbleDoneBtn').addEventListener('click', () => {
+    document.getElementById('detailBubble').hidden = true;
   });
 
   document.getElementById('breathOrbFab').addEventListener('click', () => {
@@ -801,7 +863,7 @@
     const entries = loadEntries();
     const el = document.getElementById('triggerAnalysis');
     if (!entries.length) {
-      el.innerHTML = '<div class="history-empty">还没有足够的数据，记录几次心情后，这里会显示触发因素分析。</div>';
+      el.innerHTML = '<div class="history-empty">还没有足够的数据，记录几次心情后，这里会显示情绪关联分析。</div>';
       return;
     }
     const stats = {};
@@ -818,7 +880,7 @@
       .slice(0, 8);
 
     if (!rows.length) {
-      el.innerHTML = '<div class="history-empty">还没有记录触发因素标签。</div>';
+      el.innerHTML = '<div class="history-empty">还没有记录和情绪相关的标签。</div>';
       return;
     }
     const maxCount = Math.max(...rows.map(r => r.count));
@@ -1054,8 +1116,14 @@
     });
   });
 
+  // 一键开始：无论从首页还是"关怀"页触发，都直接落到具体的干预动作上，
+  // 中间不再需要"关怀页 → 找到方案 → 选呼吸模式 → 开始练习"这几步手动操作。
   function startCarePlanAction() {
     const plan = getCarePlan();
+    const needsCareView = plan.action.type === 'breathing' || plan.action.type === 'meditation' || plan.action.type === 'music';
+    if (needsCareView && !document.getElementById('view-care').classList.contains('active')) {
+      showView('care');
+    }
     if (plan.action.type === 'breathing') {
       pendingCareContext = { tier: plan.tier, trigger: plan.trigger, kind: 'breathing' };
       document.getElementById('breathingCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1101,7 +1169,27 @@
     return plan;
   }
 
-  document.getElementById('autoRecommendBtn').addEventListener('click', () => showView('care'));
+  // 首页直接展示完整的个性化关怀卡（而不是一句预览文案 + "查看今天的小方案"跳转），
+  // 让"一键开始"真正只需要一次点击。
+  function renderHomeCareCard() {
+    const plan = getCarePlan();
+    document.getElementById('homeCareTitle').textContent = plan.title;
+    document.getElementById('homeCareLead').textContent = plan.leadText;
+    document.getElementById('homeCareStartBtn').textContent = plan.actionLabel;
+    const skipBtn = document.getElementById('homeCareSkipBtn');
+    skipBtn.hidden = plan.tier === 'none' || !plan.secondaryLabel;
+    skipBtn.textContent = plan.secondaryLabel || '';
+    document.getElementById('homeCareRest').hidden = true;
+    document.getElementById('homeCareMoreBtn').hidden = plan.tier === 'none';
+  }
+
+  document.getElementById('homeCareStartBtn').addEventListener('click', startCarePlanAction);
+  document.getElementById('homeCareSkipBtn').addEventListener('click', () => {
+    const plan = getCarePlan();
+    const restEl = document.getElementById('homeCareRest');
+    restEl.textContent = plan.secondaryMessage || '好，那就先这样，慢慢来。';
+    restEl.hidden = false;
+  });
 
   function renderCare() {
     renderCarePlanCard();

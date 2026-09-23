@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>心情日记 · 情绪日记与自我关怀</title>
-<meta name="description" content="零门槛记录情绪变化，分析触发因素，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
+<meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -87,8 +87,11 @@
         </div>
 
         <div class="detail-bubble" id="detailBubble" hidden>
-          <span id="detailBubbleText">记下了</span>
-          <button type="button" id="detailBubbleBtn">补充一点细节</button>
+          <p class="detail-bubble-text" id="detailBubbleText"></p>
+          <div class="detail-bubble-actions">
+            <button type="button" id="detailBubbleMoreBtn">补充一点</button>
+            <button type="button" id="detailBubbleDoneBtn">今天就记到这里</button>
+          </div>
         </div>
       </div>
 
@@ -122,40 +125,52 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3><img class="icon-img" src="assets/icon-sprout.png" alt="">为你推荐</h3>
-        <p class="muted small" id="autoRecommendText">根据你最近的情绪状态和关联因素自动生成</p>
-        <button class="btn btn-primary btn-block" id="autoRecommendBtn">查看今天的小方案</button>
-        <button class="btn btn-ghost btn-block" data-nav="care">自己看看全部方案</button>
+      <div class="card care-plan-card" id="homeCareCard">
+        <img class="care-plan-vine" src="assets/deco-vine.png" alt="">
+        <h2 id="homeCareTitle">为你推荐</h2>
+        <p class="muted small" id="homeCareLead"></p>
+        <button class="btn btn-primary btn-block" id="homeCareStartBtn">开始</button>
+        <button type="button" class="care-plan-skip" id="homeCareSkipBtn">我现在什么都不想做</button>
+        <p class="care-plan-rest muted small" id="homeCareRest" hidden></p>
+        <button class="btn btn-ghost btn-block" data-nav="care" id="homeCareMoreBtn">自己看看全部方案</button>
       </div>
     </section>
 
-    <!-- ============ 记录详情（补充细节 / 编辑） ============ -->
+    <!-- ============ 记录详情（补充细节 / 编辑，渐进式 check-in） ============ -->
     <section class="view" id="view-log">
-      <div class="card">
+      <div class="card checkin-card">
         <div class="card-title-row">
-          <h2 id="logTitle" style="margin:0">补充细节</h2>
+          <div class="checkin-mood-pill" id="checkinMoodPill">
+            <div class="mood-picker" id="moodPicker">
+              <button type="button" class="mood-opt" data-mood="5"><img class="mood-emoji" src="assets/icon-mood-5.png" alt="很好"><span>很好</span></button>
+              <button type="button" class="mood-opt" data-mood="4"><img class="mood-emoji" src="assets/icon-mood-4.png" alt="不错"><span>不错</span></button>
+              <button type="button" class="mood-opt" data-mood="3"><img class="mood-emoji" src="assets/icon-mood-3.png" alt="一般"><span>一般</span></button>
+              <button type="button" class="mood-opt" data-mood="2"><img class="mood-emoji" src="assets/icon-mood-2.png" alt="低落"><span>低落</span></button>
+              <button type="button" class="mood-opt" data-mood="1"><img class="mood-emoji" src="assets/icon-mood-1.png" alt="很糟"><span>很糟</span></button>
+            </div>
+          </div>
           <button class="btn-ghost" id="logCancelBtn" style="border:none;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer">返回花园</button>
         </div>
 
-        <div class="field">
-          <label>你现在感觉…</label>
-          <div class="mood-picker" id="moodPicker">
-            <button type="button" class="mood-opt" data-mood="5"><img class="mood-emoji" src="assets/icon-mood-5.png" alt="很好"><span>很好</span></button>
-            <button type="button" class="mood-opt" data-mood="4"><img class="mood-emoji" src="assets/icon-mood-4.png" alt="不错"><span>不错</span></button>
-            <button type="button" class="mood-opt" data-mood="3"><img class="mood-emoji" src="assets/icon-mood-3.png" alt="一般"><span>一般</span></button>
-            <button type="button" class="mood-opt" data-mood="2"><img class="mood-emoji" src="assets/icon-mood-2.png" alt="低落"><span>低落</span></button>
-            <button type="button" class="mood-opt" data-mood="1"><img class="mood-emoji" src="assets/icon-mood-1.png" alt="很糟"><span>很糟</span></button>
+        <div class="checkin-steps" id="checkinSteps">
+          <span class="checkin-step-dot active" data-step="1"></span>
+          <span class="checkin-step-dot" data-step="2"></span>
+          <span class="checkin-step-dot" data-step="3"></span>
+        </div>
+
+        <div class="checkin-step" id="checkinStep1">
+          <p class="checkin-question">这种感觉有多明显？</p>
+          <div class="intensity-dots" id="intensityDots">
+            <button type="button" class="intensity-dot" data-value="1"><span></span><small>1</small></button>
+            <button type="button" class="intensity-dot" data-value="2"><span></span><small>2</small></button>
+            <button type="button" class="intensity-dot" data-value="3"><span></span><small>3</small></button>
+            <button type="button" class="intensity-dot" data-value="4"><span></span><small>4</small></button>
+            <button type="button" class="intensity-dot" data-value="5"><span></span><small>5</small></button>
           </div>
         </div>
 
-        <div class="field">
-          <label for="intensity">情绪强度 <span id="intensityVal" class="muted">3</span>/5</label>
-          <input type="range" id="intensity" min="1" max="5" value="3" step="1">
-        </div>
-
-        <div class="field">
-          <label>此刻可能相关的因素（可多选）</label>
+        <div class="checkin-step" id="checkinStep2" hidden>
+          <p class="checkin-question" id="checkinFactorQuestion">今天的感觉，好像更多和什么有关？</p>
           <div class="tag-picker" id="triggerPicker">
             <button type="button" class="tag-opt" data-tag="工作学业">工作/学业</button>
             <button type="button" class="tag-opt" data-tag="人际关系">人际关系</button>
@@ -168,15 +183,24 @@
             <button type="button" class="tag-opt" data-tag="独处">独处</button>
             <button type="button" class="tag-opt" data-tag="其他">其他</button>
           </div>
+          <div class="checkin-actions">
+            <button type="button" class="btn btn-ghost" id="checkinStep2Back">上一步</button>
+            <button type="button" class="btn btn-ghost" id="checkinStep2Skip">跳过</button>
+            <button type="button" class="btn btn-primary" id="checkinStep2Next">下一步</button>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="note">想说点什么（选填）</label>
+        <div class="checkin-step" id="checkinStep3" hidden>
+          <p class="checkin-question" id="checkinNoteQuestion">想留一句话给今天吗？</p>
           <textarea id="note" rows="3" placeholder="发生了什么？此刻脑子里在想什么？"></textarea>
+          <div class="checkin-actions">
+            <button type="button" class="btn btn-ghost" id="checkinStep3Back">上一步</button>
+            <button type="button" class="btn btn-ghost" id="checkinStep3Skip">先不写</button>
+            <button type="button" class="btn btn-primary" id="saveEntryBtn">保存</button>
+          </div>
         </div>
 
-        <button class="btn btn-primary btn-block" id="saveEntryBtn">保存记录</button>
-        <button class="btn btn-danger-ghost btn-block" id="logDeleteBtn" hidden>删除这条记录</button>
+        <button class="btn btn-danger-ghost btn-block" id="logDeleteBtn" hidden style="margin-top:14px">删除这条记录</button>
         <div id="saveConfirm" class="save-confirm" hidden></div>
       </div>
     </section>
@@ -328,7 +352,7 @@
 
 </div>
 
-<script src="audio.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="audio.js?v=16"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>
