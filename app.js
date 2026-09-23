@@ -76,9 +76,11 @@
       return {};
     }
   }
-  function setInsightFeedback(key, value) {
+  // countAtConfirm 记录确认时的样本量：同一个结论确认过之后就"退休"，
+  // 除非又积累了明显更多的新证据（见 RESURFACE_GROWTH），否则不会反复念叨同一句话。
+  function setInsightFeedback(key, value, countAtConfirm) {
     const fb = loadInsightFeedback();
-    fb[key] = value;
+    fb[key] = { value, countAtConfirm: countAtConfirm || 0 };
     localStorage.setItem(INSIGHT_FEEDBACK_KEY, JSON.stringify(fb));
   }
 
@@ -347,6 +349,46 @@
     });
   }
 
+  // 数据只存在本地浏览器，记录积累到一定量后主动提醒备份，而不是靠用户自己想起来。
+  // 每种满一片花园（每 GARDEN_MILESTONE 条）提醒一次，避免频繁打扰。
+  function renderBackupReminder() {
+    const banner = document.getElementById('backupReminder');
+    if (!banner) return;
+    const total = loadEntries().length;
+    const lastPromptAt = Number(localStorage.getItem('moodDiary.backupPromptAt') || 0);
+    const milestoneReached = total > 0 && total % GARDEN_MILESTONE === 0;
+    banner.hidden = !(milestoneReached && total !== lastPromptAt);
+  }
+
+  const backupExportBtn = document.getElementById('backupExportBtn');
+  if (backupExportBtn) {
+    backupExportBtn.addEventListener('click', () => {
+      exportBackup();
+      document.getElementById('backupReminder').hidden = true;
+    });
+  }
+  const backupDismissBtn = document.getElementById('backupDismissBtn');
+  if (backupDismissBtn) {
+    backupDismissBtn.addEventListener('click', () => {
+      localStorage.setItem('moodDiary.backupPromptAt', String(loadEntries().length));
+      document.getElementById('backupReminder').hidden = true;
+    });
+  }
+
+  // 首次使用引导：只在从没关闭过的时候显示，不做成强制新手教程
+  function renderOnboarding() {
+    const card = document.getElementById('onboardingCard');
+    if (!card) return;
+    card.hidden = !!localStorage.getItem('moodDiary.onboarded');
+  }
+  const onboardingDismissBtn = document.getElementById('onboardingDismissBtn');
+  if (onboardingDismissBtn) {
+    onboardingDismissBtn.addEventListener('click', () => {
+      localStorage.setItem('moodDiary.onboarded', '1');
+      document.getElementById('onboardingCard').hidden = true;
+    });
+  }
+
   // ---------- home ----------
   function renderHome() {
     const entries = loadEntries();
@@ -379,6 +421,8 @@
     document.getElementById('autoRecommendBtn').textContent = plan.tier === 'none' ? '去记录心情' : '查看今天的小方案';
 
     renderSafetyBanner();
+    renderBackupReminder();
+    renderOnboarding();
   }
 
   function recentMoodScore() {
@@ -418,6 +462,23 @@
     scene.style.filter = overflow >= 0 ? GARDEN_TINTS[overflow % GARDEN_TINTS.length] : 'none';
   }
 
+  // 种满的花园留下一句小结，而不只是换个背景——让每片花园成为有记忆点的"章节"
+  function summarizePlotEntries(plotEntries) {
+    const avg = plotEntries.reduce((s, e) => s + e.mood, 0) / plotEntries.length;
+    const tagCounts = {};
+    plotEntries.forEach(e => (e.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
+    const topTagEntry = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0];
+    const half = Math.floor(plotEntries.length / 2);
+    const firstAvg = plotEntries.slice(0, half).reduce((s, e) => s + e.mood, 0) / half;
+    const secondAvg = plotEntries.slice(half).reduce((s, e) => s + e.mood, 0) / (plotEntries.length - half);
+    const trend = secondAvg - firstAvg;
+
+    const moodDesc = avg >= 3.8 ? '整体比较愉悦' : (avg <= 2.3 ? '整体偏低落' : '情绪起伏比较平稳');
+    const trendDesc = trend >= 0.6 ? '，而且是越种越好' : (trend <= -0.6 ? '，不过后半程有点往下走' : '');
+    const tagDesc = topTagEntry ? `，「${topTagEntry[0]}」出现得最多` : '';
+    return `${moodDesc}${trendDesc}${tagDesc}。`;
+  }
+
   function renderGarden() {
     const entries = loadEntries().slice().sort((a, b) => a.ts - b.ts);
     const total = entries.length;
@@ -448,6 +509,14 @@
     document.getElementById('gardenPrompt').textContent = !isCurrentPlot
       ? '正在回顾这片花园，点右边的箭头回到今天'
       : (hasToday ? '今天已经和你一起记录过啦，想再聊聊现在的心情吗？' : '嗨，这一刻的你，感觉怎么样？点一下就好');
+
+    const summaryEl = document.getElementById('gardenPlotSummary');
+    if (plotEntries.length === GARDEN_MILESTONE) {
+      summaryEl.textContent = summarizePlotEntries(plotEntries);
+      summaryEl.hidden = false;
+    } else {
+      summaryEl.hidden = true;
+    }
 
     renderGardenProgress(total, displayedPlot, current);
     document.getElementById('plotPrevBtn').disabled = displayedPlot <= 1;
@@ -612,32 +681,51 @@
     return best;
   }
 
+  // 已确认过的发现不会一直重复念叨——除非样本量比确认时又明显增长了，才会带着新证据再出现一次
+  const RESURFACE_GROWTH = 5;
+  function isRetired(fb, key, currentCount) {
+    const prior = fb[key];
+    if (!prior || typeof prior !== 'object') return false;
+    return (currentCount - (prior.countAtConfirm || 0)) < RESURFACE_GROWTH;
+  }
+
   function renderDiscoveryCards() {
     const el = document.getElementById('discoveryCards');
     if (!el) return;
     const fb = loadInsightFeedback();
     const cards = [];
+    let retiredCount = 0;
 
     const assoc = analyzeEventAssociation();
     if (assoc) {
       const key = 'assoc:' + assoc.tag;
-      cards.push({
-        key,
-        text: `最近两周，「${assoc.tag}」出现在 ${assoc.count} 次记录里，其中 ${assoc.lowCount} 次情绪偏低。涉及「${assoc.tag}」的记录，平均情绪比其他记录更低。`,
-        confirmable: true,
-        value: fb[key],
-      });
+      if (isRetired(fb, key, assoc.count)) {
+        retiredCount++;
+      } else {
+        cards.push({
+          key,
+          count: assoc.count,
+          text: `最近两周，「${assoc.tag}」出现在 ${assoc.count} 次记录里，其中 ${assoc.lowCount} 次情绪偏低。涉及「${assoc.tag}」的记录，平均情绪比其他记录更低。`,
+          confirmable: true,
+          value: fb[key] && fb[key].value,
+        });
+      }
     }
 
     const timePattern = analyzeTimePattern();
     if (timePattern) {
       const key = `time:${timePattern.dow}-${timePattern.bucket}`;
-      cards.push({
-        key,
-        text: `最近一个月，你${DOW_NAMES[timePattern.dow]}${timePattern.bucket}的情绪，通常比其他时间更低一些。`,
-        confirmable: true,
-        value: fb[key],
-      });
+      if (isRetired(fb, key, timePattern.count)) {
+        retiredCount++;
+      } else {
+        cards.push({
+          key,
+          count: timePattern.count,
+          text: `最近一个月，你${DOW_NAMES[timePattern.dow]}${timePattern.bucket}的情绪，通常比其他时间更低一些。`,
+          confirmable: true,
+          value: fb[key] && fb[key].value,
+        });
+      }
     }
 
     const behavior = analyzeBehaviorFeedback();
@@ -650,7 +738,9 @@
     }
 
     if (!cards.length) {
-      el.innerHTML = '<div class="history-empty">继续记录几次，我们就能帮你发现更多关于自己的小规律。</div>';
+      el.innerHTML = retiredCount > 0
+        ? '<div class="history-empty">你已经确认过目前发现的规律，继续记录会帮你发现新的变化。</div>'
+        : '<div class="history-empty">继续记录几次，我们就能帮你发现更多关于自己的小规律。</div>';
       return;
     }
 
@@ -658,7 +748,7 @@
       <div class="discovery-card">
         <p>${c.text}</p>
         ${c.confirmable ? `
-          <div class="discovery-confirm" data-key="${c.key}">
+          <div class="discovery-confirm" data-key="${c.key}" data-count="${c.count}">
             <button type="button" class="discovery-btn ${c.value === 'yes' ? 'selected' : ''}" data-value="yes">符合</button>
             <button type="button" class="discovery-btn ${c.value === 'unsure' ? 'selected' : ''}" data-value="unsure">不确定</button>
             <button type="button" class="discovery-btn ${c.value === 'no' ? 'selected' : ''}" data-value="no">不符合</button>
@@ -671,7 +761,7 @@
       row.addEventListener('click', (e) => {
         const btn = e.target.closest('.discovery-btn');
         if (!btn) return;
-        setInsightFeedback(row.dataset.key, btn.dataset.value);
+        setInsightFeedback(row.dataset.key, btn.dataset.value, Number(row.dataset.count));
         row.querySelectorAll('.discovery-btn').forEach(b => b.classList.toggle('selected', b === btn));
       });
     });
@@ -1156,7 +1246,7 @@
     renderHistory();
   });
 
-  document.getElementById('exportBtn').addEventListener('click', () => {
+  function exportBackup() {
     const data = JSON.stringify(loadEntries(), null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1167,7 +1257,10 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  });
+    localStorage.setItem('moodDiary.backupPromptAt', String(loadEntries().length));
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', exportBackup);
 
   document.getElementById('clearBtn').addEventListener('click', () => {
     if (confirm('确定要清空所有情绪记录吗？此操作无法撤销，建议先导出备份。')) {

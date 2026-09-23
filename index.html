@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，分析触发因素，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -44,6 +44,16 @@
     <!-- ============ 首页：情绪花园 ============ -->
     <section class="view" id="view-home">
 
+      <div class="card onboarding-card" id="onboardingCard" hidden>
+        <h3>欢迎来到你的情绪花园</h3>
+        <div class="onboarding-list">
+          <div class="onboarding-item"><img class="icon-img" src="assets/icon-tab-garden.png" alt="">花园：点一下就能记录此刻的心情，每条记录都会种下一朵花</div>
+          <div class="onboarding-item"><img class="icon-img" src="assets/icon-tab-insight.png" alt="">洞察：记得越多，我们就能帮你发现关于自己的小规律</div>
+          <div class="onboarding-item"><img class="icon-img" src="assets/icon-tab-care.png" alt="">关怀：根据你此刻的状态，自动给你一个能做的小方案</div>
+        </div>
+        <button class="btn btn-primary btn-block" id="onboardingDismissBtn">开始使用</button>
+      </div>
+
       <div class="garden-card">
         <div class="garden-scene" id="gardenScene" style="background-image:url('assets/bg-day.jpg')">
           <img class="ambient sprite-butterfly" src="assets/sprite-butterfly.png" alt="">
@@ -65,6 +75,7 @@
             <button type="button" class="plot-nav-btn" id="plotNextBtn" title="回到今天" hidden>›</button>
           </div>
           <div class="garden-progress-text" id="gardenProgressText"></div>
+          <div class="garden-plot-summary" id="gardenPlotSummary" hidden></div>
         </div>
 
         <div class="quick-mood-row" id="quickMoodRow">
@@ -85,6 +96,13 @@
         <h3>最近几天，你持续记录到了比较低落的状态</h3>
         <p class="muted small">不需要现在解决所有问题。如果这种状态持续，考虑和信任的人聊聊，或寻求专业的心理支持渠道，都是可以的。</p>
         <button class="btn btn-ghost btn-block" id="safetyDismissBtn">知道了，继续记录</button>
+      </div>
+
+      <div class="card backup-reminder" id="backupReminder" hidden>
+        <h3>记录已经不少啦，要不要备份一下？</h3>
+        <p class="muted small">数据只保存在这台设备的浏览器里，导出一份 JSON 存起来，换设备或清缓存也不怕丢失。</p>
+        <button class="btn btn-primary btn-block" id="backupExportBtn">导出备份</button>
+        <button class="btn btn-ghost btn-block" id="backupDismissBtn">下次再说</button>
       </div>
 
       <div class="card" id="homeStreakCard">
@@ -310,7 +328,7 @@
 
 </div>
 
-<script src="audio.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="audio.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

@@ -224,6 +224,19 @@ main {
 
 .icon-img { width: 19px; height: 19px; object-fit: contain; flex-shrink: 0; }
 
+.onboarding-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.onboarding-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.onboarding-item .icon-img { width: 22px; height: 22px; }
+
 .muted { color: var(--text-muted); }
 .small { font-size: 13px; }
 
@@ -416,6 +429,13 @@ main {
   text-align: center;
   font-size: 12px;
   color: var(--text-muted);
+}
+.garden-plot-summary {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--accent-deep);
+  font-style: italic;
 }
 .garden-progress.celebrate {
   animation: gardenCelebrate 0.7s ease;
@@ -736,6 +756,9 @@ textarea, .text-input {
 /* safety banner */
 .safety-banner { border: 1px solid var(--danger-soft); }
 .safety-banner h3 { color: var(--danger); }
+
+.backup-reminder { border: 1px solid var(--leaf-soft); }
+.backup-reminder h3 { color: var(--leaf); }
 
 /* discovery / insight cards */
 .discovery-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
