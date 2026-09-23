@@ -213,6 +213,11 @@
     return MOOD_META[lo].color;
   }
 
+  function budSpriteForScore(score) {
+    const lvl = Math.max(1, Math.min(5, Math.round(score)));
+    return MOOD_SPRITES[lvl][0];
+  }
+
   // ---------- SVG line chart ----------
   function buildTrendSVG(days) {
     const W = Math.max(days.length * 34, 280);
@@ -508,7 +513,9 @@
           <span class="muted">平均情绪 ${r.avg.toFixed(1)}</span>
         </div>
         <div class="trigger-bar-bg">
-          <div class="trigger-bar-fill" style="width:${(r.count / maxCount * 100).toFixed(0)}%;background:${moodColorForScore(r.avg)}"></div>
+          <div class="trigger-bar-fill" style="width:${(r.count / maxCount * 100).toFixed(0)}%;background:${moodColorForScore(r.avg)}">
+            <img class="trigger-bar-flower" src="${budSpriteForScore(r.avg)}" alt="">
+          </div>
         </div>
       </div>
     `).join('');
@@ -816,6 +823,7 @@
       const tags = (e.tags || []).map(t => `<span class="history-tag">${t}</span>`).join('');
       return `
         <div class="history-item" data-id="${e.id}">
+          <img class="history-pressed-flower" src="${spriteFor(e)}" alt="">
           <div class="history-item-top">
             <img class="hi-emoji" src="${meta.icon}" alt="${meta.label}">
             <span>${meta.label} · 强度${e.intensity}</span>
