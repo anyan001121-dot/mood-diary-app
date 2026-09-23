@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -92,6 +92,17 @@
             <button type="button" id="detailBubbleMoreBtn">补充一点</button>
             <button type="button" id="detailBubbleDoneBtn">今天就记到这里</button>
           </div>
+        </div>
+      </div>
+
+      <div class="card delayed-checkin-card" id="delayedCheckinCard" hidden>
+        <h3 id="delayedCheckinGreeting">下午好</h3>
+        <p class="muted small" id="delayedCheckinText"></p>
+        <div class="care-feedback-row">
+          <button type="button" class="care-feedback-btn" id="delayedCheckinBetter" data-value="better">好一点了</button>
+          <button type="button" class="care-feedback-btn" id="delayedCheckinSame" data-value="same">差不多</button>
+          <button type="button" class="care-feedback-btn" id="delayedCheckinWorse" data-value="worse">还是不太好</button>
+          <button type="button" class="care-feedback-btn" id="delayedCheckinSkip" data-value="skip">不想回答</button>
         </div>
       </div>
 
@@ -365,7 +376,7 @@
 
 </div>
 
-<script src="audio.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="audio.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

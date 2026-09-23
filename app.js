@@ -67,6 +67,22 @@
     return entry;
   }
 
+  // 延迟回访：记下哪些低落记录已经被"回访"过（回答了或明确不想回答），
+  // 避免同一条记录被反复追问。这是 Before → Intervention → After 数据链路的第一步。
+  const DELAYED_CHECKIN_KEY = 'moodDiary.delayedCheckins.v1';
+  function loadDelayedCheckins() {
+    try {
+      return JSON.parse(localStorage.getItem(DELAYED_CHECKIN_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function markDelayedCheckin(entryId, response) {
+    const map = loadDelayedCheckins();
+    map[entryId] = { ts: Date.now(), response };
+    localStorage.setItem(DELAYED_CHECKIN_KEY, JSON.stringify(map));
+  }
+
   // 洞察确认：用户对"这个发现符合你的感觉吗"的回应，key 形如 assoc:工作学业 / time:1-上午
   const INSIGHT_FEEDBACK_KEY = 'moodDiary.insightFeedback.v1';
   function loadInsightFeedback() {
@@ -439,6 +455,65 @@
     });
   }
 
+  // 延迟回访：情绪低落的记录发生 2~8 小时后、用户再次打开产品时，主动问一句"现在呢？"
+  // 而不是只在做完呼吸练习那一刻问一次——这样才能攒出 Before → Intervention → After 的数据。
+  const DELAYED_CHECKIN_MIN_MS = 2 * 3600000;
+  const DELAYED_CHECKIN_MAX_MS = 8 * 3600000;
+
+  function findDelayedCheckinCandidate() {
+    const now = Date.now();
+    const done = loadDelayedCheckins();
+    const candidates = loadEntries()
+      .filter(e => e.mood <= 2 && !done[e.id])
+      .filter(e => {
+        const age = now - e.ts;
+        return age >= DELAYED_CHECKIN_MIN_MS && age <= DELAYED_CHECKIN_MAX_MS;
+      })
+      .sort((a, b) => b.ts - a.ts);
+    return candidates[0] || null;
+  }
+
+  function timeGreeting() {
+    const h = new Date().getHours();
+    if (h < 11) return '上午好';
+    if (h < 14) return '中午好';
+    if (h < 18) return '下午好';
+    return '晚上好';
+  }
+
+  function buildDelayedCheckinText(entry) {
+    const hoursAgo = Math.max(1, Math.round((Date.now() - entry.ts) / 3600000));
+    const tag = (entry.tags || [])[0];
+    const moodWord = entry.mood === 1 ? '很不好受' : '有点低落';
+    const base = tag
+      ? `${hoursAgo}小时前你说「${tag}」的事让你${moodWord}`
+      : `${hoursAgo}小时前你记录到「${MOOD_META[entry.mood].label}」的心情`;
+    return `${base}。现在呢？`;
+  }
+
+  function renderDelayedCheckin() {
+    const card = document.getElementById('delayedCheckinCard');
+    if (!card) return;
+    const entry = findDelayedCheckinCandidate();
+    if (!entry) { card.hidden = true; return; }
+    document.getElementById('delayedCheckinGreeting').textContent = timeGreeting() + '。';
+    document.getElementById('delayedCheckinText').textContent = buildDelayedCheckinText(entry);
+    card.dataset.entryId = entry.id;
+    card.hidden = false;
+  }
+
+  document.querySelectorAll('.delayed-checkin-card .care-feedback-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = document.getElementById('delayedCheckinCard');
+      const entryId = card.dataset.entryId;
+      if (entryId) markDelayedCheckin(entryId, btn.dataset.value);
+      card.hidden = true;
+      if (btn.dataset.value !== 'skip') {
+        showToast(btn.dataset.value === 'better' ? '好的，谢谢你告诉我们。' : '好，我们知道了。');
+      }
+    });
+  });
+
   // ---------- home ----------
   function renderHome() {
     const entries = loadEntries();
@@ -466,6 +541,7 @@
     document.getElementById('statAvg').textContent = avg7 ? avg7.toFixed(1) : '–';
 
     renderHomeCareCard();
+    renderDelayedCheckin();
 
     renderSafetyBanner();
     renderBackupReminder();
@@ -656,21 +732,25 @@
     if (id) openEntryEditor(id);
   });
 
-  function showFlowerCompanionToast(entryId) {
-    const entry = loadEntries().find(e => e.id === entryId);
-    if (!entry) return;
-    const days = Math.floor((startOfDay(Date.now()) - startOfDay(entry.ts)) / 86400000);
+  function showToast(text) {
     const toast = document.getElementById('flowerToast');
-    toast.textContent = days <= 0 ? '🌱 这朵花是今天刚种下的。' : `🌱 这朵花已经陪你 ${days} 天了。`;
+    toast.textContent = text;
     toast.hidden = false;
     toast.classList.remove('show');
     void toast.offsetWidth;
     toast.classList.add('show');
-    clearTimeout(showFlowerCompanionToast._t);
-    showFlowerCompanionToast._t = setTimeout(() => {
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => {
       toast.classList.remove('show');
       setTimeout(() => { toast.hidden = true; }, 250);
     }, 2600);
+  }
+
+  function showFlowerCompanionToast(entryId) {
+    const entry = loadEntries().find(e => e.id === entryId);
+    if (!entry) return;
+    const days = Math.floor((startOfDay(Date.now()) - startOfDay(entry.ts)) / 86400000);
+    showToast(days <= 0 ? '🌱 这朵花是今天刚种下的。' : `🌱 这朵花已经陪你 ${days} 天了。`);
   }
 
   const gardenTimelineEl = document.getElementById('gardenTimeline');

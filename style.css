@@ -873,6 +873,10 @@ textarea, .text-input {
 .backup-reminder { border: 1px solid var(--leaf-soft); }
 .backup-reminder h3 { color: var(--leaf); }
 
+.delayed-checkin-card { border: 1px solid var(--accent-soft); }
+.delayed-checkin-card h3 { color: var(--accent-deep); }
+.delayed-checkin-card .care-feedback-row { margin-top: 4px; }
+
 /* discovery / insight cards */
 .discovery-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .discovery-card {
