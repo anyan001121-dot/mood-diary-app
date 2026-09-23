@@ -392,9 +392,9 @@
   // 这片花园就算种满了，会开启一片新的花园和新背景；旧花园可以用箭头往回翻看。
   const GARDEN_MILESTONE = 12;
 
-  // 目前只有一张背景图；之后每补一张，就往数组里加一项，新花园会自动用上新背景。
-  // 数组用完的花园会循环使用一组色调滤镜，让"新的一片"看起来依然有区别。
-  const GARDEN_BACKGROUNDS = ['assets/bg-day.jpg'];
+  // 每种满一片花园就换一张真实背景（白天→黄昏→雨后→夜晚）；再往后新增背景图，
+  // 直接往数组里加一项即可。数组用完的花园会在最后一张背景上循环叠加色调滤镜。
+  const GARDEN_BACKGROUNDS = ['assets/bg-day.jpg', 'assets/bg-dusk.jpg', 'assets/bg-rain.jpg', 'assets/bg-night.jpg'];
   const GARDEN_TINTS = [
     'none',
     'hue-rotate(25deg) saturate(1.12)',
@@ -413,7 +413,9 @@
     const scene = document.getElementById('gardenScene');
     const bgIdx = Math.min(plotNumber - 1, GARDEN_BACKGROUNDS.length - 1);
     scene.style.backgroundImage = `url('${GARDEN_BACKGROUNDS[bgIdx]}')`;
-    scene.style.filter = GARDEN_TINTS[(plotNumber - 1) % GARDEN_TINTS.length];
+    // 真实背景图不叠加滤镜；只有超出背景图数量、复用最后一张时才循环叠加色调
+    const overflow = plotNumber - GARDEN_BACKGROUNDS.length;
+    scene.style.filter = overflow >= 0 ? GARDEN_TINTS[overflow % GARDEN_TINTS.length] : 'none';
   }
 
   function renderGarden() {

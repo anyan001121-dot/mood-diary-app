@@ -765,6 +765,23 @@ textarea, .text-input {
 }
 
 /* care plan card (情境化微干预) */
+.care-plan-card { position: relative; overflow: hidden; }
+.care-plan-vine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 92px;
+  height: auto;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.care-plan-card > h2,
+.care-plan-card > p,
+.care-plan-card > .care-steps,
+.care-plan-card > button {
+  position: relative;
+  z-index: 1;
+}
 .care-plan-card h2 { margin-bottom: 4px; }
 .care-steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
 .care-step {
