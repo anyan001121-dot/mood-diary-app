@@ -417,7 +417,7 @@
 
     // 自动推荐（首页预览，完整的小方案在"关怀"页）
     const plan = getCarePlan();
-    document.getElementById('autoRecommendText').textContent = plan.leadText;
+    document.getElementById('autoRecommendText').textContent = plan.homeText;
     document.getElementById('autoRecommendBtn').textContent = plan.tier === 'none' ? '去记录心情' : '查看今天的小方案';
 
     renderSafetyBanner();
@@ -859,87 +859,176 @@
     { title: '短时高强度运动', desc: '跳绳/开合跳3-5分钟，让积压的情绪能量有个出口。' },
   ];
 
-  const MUSIC_LABELS = { pad: '暖光序曲', rain: '雨声白噪音', bowl: '颂钵回响' };
+  // ---------- 全状态个性化关怀文案：情绪(5档) × 关联因素(10种) ----------
+  // 设计原则：情绪档位决定"要不要干预、语气多轻"；关联因素决定"关怀什么"；
+  // 强度决定"能承受多复杂的行动"。很好/不错不做因素分层——正向情绪不该被"医疗化"。
 
-  // 找出最近记录里，情绪低落时最常同时出现的标签。
-  // 注意：这只说明"同时出现"，不代表因果——文案上也只说"常常伴随"，不说"导致"。
-  function analyzeTopTrigger() {
-    const entries = loadEntries();
-    if (!entries.length) return null;
-    const recentWindow = entries.filter(e => e.ts >= Date.now() - 30 * 86400000);
-    const pool = recentWindow.length ? recentWindow : entries;
-    const lowEntries = pool.filter(e => e.mood <= 2);
-    const source = lowEntries.length ? lowEntries : pool;
-
-    const counts = {};
-    source.forEach(e => (e.tags || []).forEach(tag => { counts[tag] = (counts[tag] || 0) + 1; }));
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return sorted.length ? sorted[0][0] : null;
-  }
-
-  // 根据当前状态判断"情境层级"：不是所有低落都一样，极度耗竭 / 紧绷焦虑 / 疲惫，
-  // 需要的小行动不同——这是"情境化微干预"的核心判断。
-  function determineCareTier() {
-    const entries = loadEntries();
-    if (!entries.length) return { tier: 'none', trigger: null, latest: null };
-    const latest = entries.slice().sort((a, b) => b.ts - a.ts)[0];
-    const topTrigger = analyzeTopTrigger();
-    if (topTrigger === '睡眠' || topTrigger === '健康') return { tier: 'tired', trigger: topTrigger, latest };
-    if (latest.mood <= 2 && latest.intensity >= 4) return { tier: 'depleted', trigger: topTrigger, latest };
-    if (latest.mood <= 2) return { tier: 'anxious', trigger: topTrigger, latest };
-    if (latest.mood >= 4) return { tier: 'positive', trigger: topTrigger, latest };
-    return { tier: 'neutral', trigger: topTrigger, latest };
-  }
-
-  const CARE_PLANS = {
-    depleted: {
-      title: '现在不用解决所有事情',
-      lead: () => '看起来这一刻消耗很大，先别急着振作。',
-      steps: ['跟着练习，完成4轮慢呼吸', '离开屏幕3分钟，喝一点水', '只写下明天最小需要做的一件事'],
-      action: { type: 'breathing' },
-      actionLabel: '开始呼吸练习',
-    },
-    anxious: {
-      title: '先让自己稳下来一点',
-      lead: (trigger) => trigger ? `最近的记录里，「${trigger}」常常伴随着这样的心情，先不用急着解决它。` : '看起来这一刻有点紧绷。',
-      steps: ['跟随呼吸练习，做4轮慢呼吸', '说出3件你此刻能看到的东西，把注意力拉回身边', '把下一步拆成一个最小的动作'],
-      action: { type: 'breathing' },
-      actionLabel: '开始呼吸练习',
-    },
-    tired: {
-      title: '先歇一歇，别急着振作',
-      lead: () => '最近的记录里，疲惫感比较明显。',
-      steps: ['花几分钟做一次身体扫描放松', '放一段舒缓的音乐', '今晚尽量早一点让自己躺下'],
-      action: { type: 'meditation', medIndex: 1, music: 'bowl' },
-      actionLabel: '开始身体扫描',
-    },
-    positive: {
-      title: '今天感觉不错',
-      lead: () => '要不要记下一件让你开心的小事？',
-      steps: ['留意此刻是什么让你感觉好', '写下这件小事，哪怕很小', '这会成为你的情绪存款'],
+  // 很好(5) / 不错(4)：独立文案，不叠加关联因素
+  const MOOD_ONLY_PLANS = {
+    5: {
+      home: '今天的你看起来状态很好，把这一刻种下来吧。',
+      title: '把今天的好心情留久一点',
+      lead: '不用做什么特别的事。如果愿意，可以花 10 秒想一想：今天有什么小事，让你觉得"今天还不错"？',
+      primaryLabel: '记下一件开心的小事',
       action: { type: 'note' },
-      actionLabel: '写下这件小事',
+      secondaryLabel: '就享受现在',
+      secondaryBehavior: 'message',
+      secondaryMessage: '好，那就好好享受这一刻。',
     },
-    neutral: {
-      title: '花几分钟，陪陪自己',
-      lead: () => '不好不坏，也是很真实的状态。',
-      steps: ['跟随一次正念呼吸', '留意此刻身体的感觉', '不用急着评价这一刻'],
-      action: { type: 'meditation', medIndex: 0, music: 'pad' },
-      actionLabel: '开始正念呼吸',
-    },
-    none: {
-      title: '先记录一次此刻的心情',
-      lead: () => '记录之后，我们就能为你自动搭配合适的小方案。',
-      steps: [],
-      action: { type: 'home' },
-      actionLabel: '去记录心情',
+    4: {
+      home: '今天似乎还不错，希望这份轻松可以再停留一会儿。',
+      title: '给今天留一个小小的标记',
+      lead: '如果愿意，可以记下：今天有什么事情比预想中顺利一点？或者什么都不写。',
+      primaryLabel: '记下一点',
+      action: { type: 'note' },
+      secondaryLabel: '继续逛花园',
+      secondaryBehavior: 'navigate',
     },
   };
 
+  // 一般(3) / 低落(2) / 很糟(1)：外层框架（标题、默认文案、次按钮语气）
+  const MOOD_FRAME = {
+    3: {
+      home: '今天好像就是普普通通的一天，没有特别开心，也不一定需要有什么问题。',
+      title: '普通的一天也值得被记录',
+      defaultLead: '如果现在有一点累，可以休息。如果只是平静，那就让今天保持平静。',
+      primaryLabel: '听一会儿音乐',
+      action: { type: 'music', music: 'pad' },
+      secondaryLabel: '不用做什么',
+      secondaryBehavior: 'navigate',
+    },
+    2: {
+      home: '今天好像有点难熬。不急着让自己马上好起来。',
+      title: '现在先照顾一下自己',
+      defaultLead: '不用解决今天所有的问题。我们只做一件很小的事情就好。',
+      primaryLabel: '看看适合我的小方案',
+      action: { type: 'breathing' },
+      secondaryLabel: '我现在什么都不想做',
+      secondaryBehavior: 'message',
+      secondaryMessage: '那今天先休息也可以。你愿意把现在的感受记下来，已经足够了。',
+    },
+    1: {
+      home: '今天可能真的很不好受。现在不用急着想清楚，也不用逼自己振作。',
+      title: '先陪自己待一会儿',
+      defaultLead: '今天可以把要求放低一点。喝一点水、坐下来、慢慢呼吸，或者什么都不做。',
+      primaryLabel: '陪我缓一会儿',
+      action: { type: 'breathing' },
+      secondaryLabel: '现在不想做任何事',
+      secondaryBehavior: 'message',
+      secondaryMessage: '好。那我们今天就停在这里。花园会替你留住这次记录。',
+    },
+  };
+
+  // 每个关联因素在 一般(3)/低落(2)/很糟(1) 三档下的具体文案——回答"为什么今天给我推荐这个"
+  const FACTOR_COPY = {
+    '工作学业': {
+      3: { lead: '最近是不是有一些事情一直挂在脑子里？不一定要现在解决，可以先看看哪一件最占你的注意力。', primaryLabel: '整理一下脑子', action: { type: 'note' } },
+      2: { lead: '工作或学习好像消耗了你不少能量。现在不用把整个任务完成，我们只找下一件最小的事。', steps: ['离开屏幕 1 分钟', '喝一点水', '写下"下一步只做什么"'], primaryLabel: '开始3分钟任务减压', action: { type: 'breathing' } },
+      1: { lead: '今天的工作/学习可能已经超出了你现在能轻松承受的范围。如果可以，先把"必须全部完成"放到一边。今天的目标可以只是：让自己喘口气。', primaryLabel: '先停 3 分钟', action: { type: 'breathing' } },
+    },
+    '人际关系': {
+      3: { lead: '最近和某个人的相处，好像占据了你一点注意力。这件事更像是让你困惑、失望，还是只是有点累？', primaryLabel: '整理一下感受', action: { type: 'note' } },
+      2: { lead: '和人的关系有时候比事情本身更消耗人。你现在不需要马上决定谁对谁错。', steps: ['发生了什么？', '它让我有什么感觉？'], primaryLabel: '情绪整理', action: { type: 'note' } },
+      1: { lead: '这段关系现在可能让你很不好受。今天不一定是解决关系的最好时候。可以先离开对话一会儿，把注意力放回自己身上。', primaryLabel: '陪我缓一缓', action: { type: 'breathing' } },
+    },
+    '家庭': {
+      3: { lead: '家里的事情似乎让你有一点挂心。', primaryLabel: '写下这份挂心', action: { type: 'note' } },
+      2: { lead: '家庭里的情绪有时候很复杂——因为越重要的人，越容易影响我们。今天不用急着处理所有人的感受。', primaryLabel: '先照顾自己的感受', action: { type: 'breathing' } },
+      1: { lead: '如果家里的事情让你觉得很累，可以先给自己留一点空间。暂时不回应、出去走一会儿，或者找一个你信任的人说说，都可以。', primaryLabel: '陪我缓一会儿', action: { type: 'breathing' } },
+    },
+    '健康': {
+      3: { lead: '身体的状态也会影响一天的感受。今天可以稍微留意一下身体需要什么。', primaryLabel: '留意一下身体', action: { type: 'note' } },
+      2: { lead: '身体不舒服的时候，情绪跟着下降很正常。今天不用对自己的效率要求太高，今天先把照顾身体放在完成任务前面。', steps: ['喝水', '休息', '轻微活动', '放松'], primaryLabel: '照顾一下身体', action: { type: 'meditation', medIndex: 1, music: 'bowl' } },
+      1: { lead: '如果身体的不适很明显，今天可以优先休息。如果症状严重、持续或让你担心，自我关怀工具不能代替专业医疗帮助，可以考虑寻求医生或专业人士的帮助。', primaryLabel: '先休息', action: { type: 'breathing' } },
+    },
+    '财务': {
+      3: { lead: '钱的事情是不是最近偶尔会跑进脑子里？', primaryLabel: '写下具体的事', action: { type: 'note' } },
+      2: { lead: '财务压力很容易让人产生一种"很多事情都失去控制"的感觉。现在先不用解决全部问题。', steps: ['今天只确认一个数字、一个账单，或下一件需要处理的事情'], primaryLabel: '把担心变具体', action: { type: 'note' } },
+      1: { lead: '如果现在一想到钱就觉得压力很大，先不用逼自己立刻制定完整计划。今天只需要区分：今天必须处理的，和可以以后处理的。', primaryLabel: '先分个类', action: { type: 'note' } },
+    },
+    '睡眠': {
+      3: { lead: '今天是不是没有完全睡够？今晚可以试着给自己留一点更安静的时间。', primaryLabel: '记下来', action: { type: 'note' } },
+      2: { lead: '睡眠不足会让很多原本可以承受的事情变得更难。所以今天状态不好，不一定意味着今天发生的一切都真的那么糟。今晚的目标不是"必须睡着"，而是提前10分钟离开屏幕，让身体慢慢安静下来。', primaryLabel: '提前离开屏幕', action: { type: 'meditation', medIndex: 1, music: 'bowl' } },
+      1: { lead: '如果你已经很累了，今天可能不适合继续逼自己想清楚所有问题。先让身体休息。', primaryLabel: '陪我安静 5 分钟', action: { type: 'meditation', medIndex: 1, music: 'bowl' } },
+    },
+    '社交媒体': {
+      3: { lead: '今天刷手机之后，好像心情有一点变化？', primaryLabel: '留意一下', action: { type: 'note' } },
+      2: { lead: '有时候我们只是想放松一下，却在不知不觉中开始比较、焦虑或者信息过载。不需要彻底戒掉手机，把手机放到够不到的地方，看看窗外、喝口水，或者什么都不做。', primaryLabel: '离开信息流5分钟', action: { type: 'breathing' } },
+      1: { lead: '如果现在继续刷只会让自己越来越难受，可以暂时离开那些信息。世界不会因为你消失十分钟而发生什么。', primaryLabel: '离开一下', action: { type: 'breathing' } },
+    },
+    '天气': {
+      3: { lead: '今天的天气好像也悄悄影响了一点状态。', primaryLabel: '记下来', action: { type: 'note' } },
+      2: { lead: '阴雨、闷热或者长时间见不到阳光，有时候确实会让一天显得更沉。', steps: ['适合外出：去窗边或室外待 5 分钟', '不适合外出：打开灯、放一首喜欢的音乐，让环境亮一点'], primaryLabel: '调整一下环境', action: { type: 'music', music: 'pad' } },
+      1: { lead: '今天外面的世界可能也显得灰灰的。不需要强迫自己"积极起来"。', steps: ['暖光', '热饮', '音乐', '洗澡'], primaryLabel: '给环境增加一点舒服的东西', action: { type: 'music', music: 'pad' } },
+    },
+    '独处': {
+      3: { lead: '今天一个人待着的时间比较多。这种独处对你来说更像是舒服，还是有一点孤单？', primaryLabel: '说不上来也没关系', action: { type: 'note' } },
+      2: { lead: '一个人待久了，好像有点想和世界重新连上。不一定需要进行一场很正式的聊天。', steps: ['给朋友发一个表情', '去便利店走走', '到有人的地方坐一会儿'], primaryLabel: '做一个很小的连接', action: { type: 'note' } },
+      1: { lead: '如果现在一个人让你觉得越来越难受，可以考虑联系一个你信任的人。不需要解释很多，甚至只需要："你现在方便陪我说几句话吗？"', primaryLabel: '联系一个人', action: { type: 'note' } },
+    },
+    '其他': {
+      3: { lead: '好像还有一些事情影响着今天。如果愿意，可以写下来；不想解释也完全可以。', primaryLabel: '写下来（选填）', action: { type: 'note' } },
+      2: { lead: '有些难受可能很难归类。不需要先想明白原因，才能允许自己休息。', primaryLabel: '先休息一下', action: { type: 'breathing' } },
+      1: { lead: '现在不知道为什么难受，也没关系。我们可以先不分析原因，只让这一刻稍微容易一点。', primaryLabel: '陪我缓一会儿', action: { type: 'breathing' } },
+    },
+  };
+
+  // 多个关联因素同时出现时，不逐条列建议（信息负担太大），综合成一句话
+  function buildCombinedLead(tags, mood) {
+    const list = tags.join('、');
+    return mood === 1
+      ? `今天好像很多事情撞在了一起——${list}的事，都赶在了一起。现在不需要同时解决它们，先处理最容易影响状态的那一件：休息一下。`
+      : `今天好像很多事情撞在了一起——${list}方面的事凑在了一起。现在不需要同时解决它们，先处理最容易影响身体状态的那一件：休息一下。等缓过来一点，我们再看接下来最需要处理的一件事。`;
+  }
+
+  // 情绪 × 强度 × 关联因素 → 最新一条记录决定"现在该给什么"（不是历史统计，是这一刻的真实状态）
+  function determineCareTier() {
+    const entries = loadEntries();
+    if (!entries.length) return null;
+    return entries.slice().sort((a, b) => b.ts - a.ts)[0];
+  }
+
   function getCarePlan() {
-    const ctx = determineCareTier();
-    const plan = CARE_PLANS[ctx.tier];
-    return Object.assign({}, plan, { tier: ctx.tier, trigger: ctx.trigger, leadText: plan.lead(ctx.trigger) });
+    const latest = determineCareTier();
+    if (!latest) {
+      return {
+        tier: 'none', title: '先记录一次此刻的心情', leadText: '记录之后，我们就能为你自动搭配合适的小方案。',
+        steps: [], actionLabel: '去记录心情', action: { type: 'home' }, trigger: null,
+        secondaryLabel: null, homeText: '先记录一次此刻的心情，我们就能根据你的状态和关联因素自动搭配方案。',
+      };
+    }
+
+    const mood = latest.mood;
+    const tags = latest.tags || [];
+    const trigger = tags.length ? tags.join('/') : null;
+
+    if (mood >= 4) {
+      const p = MOOD_ONLY_PLANS[mood];
+      return {
+        tier: 'mood' + mood, title: p.title, leadText: p.lead, steps: [], trigger,
+        actionLabel: p.primaryLabel, action: p.action,
+        secondaryLabel: p.secondaryLabel, secondaryBehavior: p.secondaryBehavior, secondaryMessage: p.secondaryMessage,
+        homeText: p.home,
+      };
+    }
+
+    const frame = MOOD_FRAME[mood];
+    let body;
+    if (tags.length >= 2 && mood <= 2) {
+      body = { lead: buildCombinedLead(tags, mood), steps: [], primaryLabel: frame.primaryLabel, action: frame.action };
+    } else if (tags.length >= 1 && FACTOR_COPY[tags[0]] && FACTOR_COPY[tags[0]][mood]) {
+      const fc = FACTOR_COPY[tags[0]][mood];
+      body = { lead: fc.lead, steps: fc.steps || [], primaryLabel: fc.primaryLabel, action: fc.action };
+    } else {
+      body = { lead: frame.defaultLead, steps: [], primaryLabel: frame.primaryLabel, action: frame.action };
+    }
+
+    return {
+      tier: 'mood' + mood, title: frame.title, leadText: body.lead, steps: body.steps, trigger,
+      actionLabel: body.primaryLabel, action: body.action,
+      secondaryLabel: frame.secondaryLabel, secondaryBehavior: frame.secondaryBehavior, secondaryMessage: frame.secondaryMessage,
+      homeText: frame.home,
+    };
   }
 
   let pendingCareContext = null;
@@ -973,6 +1062,10 @@
       if (!breathRunning) startBreathing();
     } else if (plan.action.type === 'meditation') {
       openMeditationSession(plan.action.medIndex, plan.action.music);
+    } else if (plan.action.type === 'music') {
+      AmbientAudio.play(plan.action.music);
+      syncMusicUI();
+      document.getElementById('careMusicCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else if (plan.action.type === 'note') {
       const entries = loadEntries().slice().sort((a, b) => b.ts - a.ts);
       if (entries.length) openEntryEditor(entries[0].id);
@@ -983,7 +1076,14 @@
 
   document.getElementById('carePlanStartBtn').addEventListener('click', startCarePlanAction);
   document.getElementById('carePlanSkipBtn').addEventListener('click', () => {
-    document.getElementById('carePlanRest').hidden = false;
+    const plan = getCarePlan();
+    if (plan.secondaryBehavior === 'navigate') {
+      showView('home');
+      return;
+    }
+    const restEl = document.getElementById('carePlanRest');
+    restEl.textContent = plan.secondaryMessage || '那今天先休息也可以。你已经完成了一次记录，这就足够了。';
+    restEl.hidden = false;
   });
 
   function renderCarePlanCard() {
@@ -994,7 +1094,9 @@
       ? plan.steps.map((s, i) => `<div class="care-step"><span class="care-step-num">${i + 1}</span><span>${s}</span></div>`).join('')
       : '';
     document.getElementById('carePlanStartBtn').textContent = plan.actionLabel;
-    document.getElementById('carePlanSkipBtn').hidden = plan.tier === 'none';
+    const skipBtn = document.getElementById('carePlanSkipBtn');
+    skipBtn.hidden = plan.tier === 'none' || !plan.secondaryLabel;
+    skipBtn.textContent = plan.secondaryLabel || '';
     document.getElementById('carePlanRest').hidden = true;
     return plan;
   }
