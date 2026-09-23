@@ -597,10 +597,105 @@
     }, 3400);
   }
 
-  document.getElementById('gardenTimeline').addEventListener('click', (e) => {
+  // 花园里的每一朵花都是一条可以打开的情绪记忆：轻点打开详情卡片，
+  // 长按看看这朵花陪了你多少天——花园从"打卡记录"变成"情绪数据本身"。
+  let sheetEntryId = null;
+  let flowerPressTimer = null;
+  let flowerLongPressFired = false;
+  let flowerPressEntryId = null;
+
+  function fmtSheetDate(ts) {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+
+  function openFlowerSheet(entryId) {
+    const entry = loadEntries().find(e => e.id === entryId);
+    if (!entry) return;
+    sheetEntryId = entryId;
+    document.getElementById('flowerSheetDate').textContent = `${fmtSheetDate(entry.ts)} · ${MOOD_META[entry.mood].label}`;
+    document.getElementById('flowerSheetMood').innerHTML =
+      `<img src="${MOOD_META[entry.mood].icon}" alt="">情绪强度 ${entry.intensity}/5`;
+    const tagsEl = document.getElementById('flowerSheetTags');
+    if (entry.tags && entry.tags.length) {
+      tagsEl.textContent = entry.tags.join(' · ');
+      tagsEl.hidden = false;
+    } else {
+      tagsEl.hidden = true;
+    }
+    const noteEl = document.getElementById('flowerSheetNote');
+    if (entry.note) {
+      noteEl.textContent = `"${entry.note}"`;
+      noteEl.hidden = false;
+    } else {
+      noteEl.hidden = true;
+    }
+    const backdrop = document.getElementById('flowerSheetBackdrop');
+    const sheet = document.getElementById('flowerSheet');
+    backdrop.hidden = false;
+    sheet.hidden = false;
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      sheet.classList.add('show');
+    });
+  }
+
+  function closeFlowerSheet() {
+    document.getElementById('flowerSheetBackdrop').classList.remove('show');
+    document.getElementById('flowerSheet').classList.remove('show');
+    setTimeout(() => {
+      document.getElementById('flowerSheetBackdrop').hidden = true;
+      document.getElementById('flowerSheet').hidden = true;
+    }, 300);
+  }
+
+  document.getElementById('flowerSheetBackdrop').addEventListener('click', closeFlowerSheet);
+  document.getElementById('flowerSheetViewBtn').addEventListener('click', () => {
+    const id = sheetEntryId;
+    closeFlowerSheet();
+    if (id) openEntryEditor(id);
+  });
+
+  function showFlowerCompanionToast(entryId) {
+    const entry = loadEntries().find(e => e.id === entryId);
+    if (!entry) return;
+    const days = Math.floor((startOfDay(Date.now()) - startOfDay(entry.ts)) / 86400000);
+    const toast = document.getElementById('flowerToast');
+    toast.textContent = days <= 0 ? '🌱 这朵花是今天刚种下的。' : `🌱 这朵花已经陪你 ${days} 天了。`;
+    toast.hidden = false;
+    toast.classList.remove('show');
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    clearTimeout(showFlowerCompanionToast._t);
+    showFlowerCompanionToast._t = setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => { toast.hidden = true; }, 250);
+    }, 2600);
+  }
+
+  const gardenTimelineEl = document.getElementById('gardenTimeline');
+  gardenTimelineEl.addEventListener('pointerdown', (e) => {
     const slot = e.target.closest('[data-entry-id]');
     if (!slot) return;
-    openEntryEditor(slot.dataset.entryId);
+    flowerPressEntryId = slot.dataset.entryId;
+    flowerLongPressFired = false;
+    clearTimeout(flowerPressTimer);
+    flowerPressTimer = setTimeout(() => {
+      flowerLongPressFired = true;
+      showFlowerCompanionToast(flowerPressEntryId);
+    }, 550);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+    gardenTimelineEl.addEventListener(evt, (e) => {
+      clearTimeout(flowerPressTimer);
+      if (evt === 'pointerup' && !flowerLongPressFired && flowerPressEntryId) {
+        const slot = e.target.closest('[data-entry-id]');
+        if (slot && slot.dataset.entryId === flowerPressEntryId) {
+          openFlowerSheet(flowerPressEntryId);
+        }
+      }
+      flowerPressEntryId = null;
+    });
   });
 
   document.getElementById('plotPrevBtn').addEventListener('click', () => {

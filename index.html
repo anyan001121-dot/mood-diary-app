@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -350,9 +350,22 @@
     <button class="tab-item" data-nav="history"><img class="tab-icon" src="assets/icon-tab-history.png" alt=""><span>历史</span></button>
   </nav>
 
+  <!-- 花园里的每一朵花都是一条可以打开的情绪记忆 -->
+  <div class="bottom-sheet-backdrop" id="flowerSheetBackdrop" hidden></div>
+  <div class="bottom-sheet" id="flowerSheet" hidden>
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-date" id="flowerSheetDate"></div>
+    <div class="bottom-sheet-mood" id="flowerSheetMood"></div>
+    <div class="bottom-sheet-tags" id="flowerSheetTags" hidden></div>
+    <p class="bottom-sheet-note" id="flowerSheetNote" hidden></p>
+    <button class="btn btn-primary btn-block" id="flowerSheetViewBtn">看看那一天</button>
+  </div>
+
+  <div class="toast" id="flowerToast" hidden></div>
+
 </div>
 
-<script src="audio.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="audio.js?v=17"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>

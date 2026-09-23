@@ -1068,3 +1068,80 @@ textarea, .text-input {
 @media (max-width: 380px) {
   .mood-opt span:last-child { font-size: 11px; }
 }
+
+/* 花园：点一朵花打开的记忆详情 */
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 60;
+}
+.bottom-sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--card-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.16);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(.32,.72,0,1);
+  z-index: 61;
+}
+.bottom-sheet.show { transform: translateY(0); }
+
+.bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  margin: 6px auto 16px;
+}
+.bottom-sheet-date { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.bottom-sheet-mood {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.bottom-sheet-mood img { width: 18px; height: 18px; object-fit: contain; }
+.bottom-sheet-tags { font-size: 13px; color: var(--accent-deep); margin-bottom: 12px; }
+.bottom-sheet-note {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.65;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 18px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(30, 30, 30, 0.88);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 70;
+  white-space: nowrap;
+  max-width: 90vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
