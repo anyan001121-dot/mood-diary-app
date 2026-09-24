@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -108,7 +108,7 @@
       </div>
 
       <button type="button" class="species-link" id="speciesLinkBtn" data-nav="species">
-        <span id="speciesLinkText">植物图鉴 · 已发现 0/13 种</span>
+        <span class="species-link-count">植物图鉴 · 已发现 0/13 种</span>
         <span class="species-link-arrow">›</span>
       </button>
 
@@ -348,12 +348,18 @@
 
     <!-- ============ 我的（历史记录 + 数据与隐私） ============ -->
     <section class="view" id="view-history">
+      <button type="button" class="species-link" data-nav="species">
+        <span class="species-link-count">植物图鉴 · 已发现 0/13 种</span>
+        <span class="species-link-arrow">›</span>
+      </button>
+
       <div class="card">
         <div class="card-title-row">
           <h3>历史记录</h3>
         </div>
         <input type="text" id="historySearch" class="text-input" placeholder="搜索笔记内容或标签…">
         <div id="historyList" class="history-list"></div>
+        <button type="button" class="history-toggle" id="historyToggleBtn" hidden>展开全部</button>
       </div>
 
       <div class="card">
@@ -438,7 +444,7 @@
 
 </div>
 
-<script src="audio.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="audio.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>

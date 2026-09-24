@@ -112,6 +112,13 @@
   });
   document.getElementById('speciesBackdrop').addEventListener('click', closeSpeciesDiscovery);
 
+  function renderSpeciesLinks() {
+    const discovered = computeDiscoveredSpecies();
+    document.querySelectorAll('.species-link-count').forEach(el => {
+      el.textContent = `植物图鉴 · 已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
+    });
+  }
+
   function renderSpeciesGuide() {
     const discovered = computeDiscoveredSpecies();
     document.getElementById('speciesProgressText').textContent = `已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
@@ -637,11 +644,7 @@
       : '今天还没有记录心情，来看看你的花园吧';
 
     renderGarden();
-    const speciesLink = document.getElementById('speciesLinkText');
-    if (speciesLink) {
-      const discovered = computeDiscoveredSpecies();
-      speciesLink.textContent = `植物图鉴 · 已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
-    }
+    renderSpeciesLinks();
     const days7 = dailyAverages(7);
 
     // 这是情绪关怀产品，不是打卡类应用："连续 X 天"这种一断就归零的计数，
@@ -1814,7 +1817,11 @@
   document.getElementById('medEndBtn').addEventListener('click', closeMeditationSession);
 
   // ---------- history ----------
+  let historyExpanded = false;
+  const HISTORY_PAGE_SIZE = 8;
+
   function renderHistory(filter) {
+    renderSpeciesLinks();
     const q = (filter || document.getElementById('historySearch').value || '').trim().toLowerCase();
     const entries = loadEntries().slice().sort((a, b) => b.ts - a.ts);
     const filtered = entries.filter(e => {
@@ -1824,11 +1831,21 @@
       return inNote || inTags;
     });
     const el = document.getElementById('historyList');
+    const toggleBtn = document.getElementById('historyToggleBtn');
     if (!filtered.length) {
       el.innerHTML = '<div class="history-empty">没有找到记录</div>';
+      toggleBtn.hidden = true;
       return;
     }
-    el.innerHTML = filtered.map(e => {
+    const showAll = historyExpanded || filtered.length <= HISTORY_PAGE_SIZE;
+    const visible = showAll ? filtered : filtered.slice(0, HISTORY_PAGE_SIZE);
+    if (filtered.length <= HISTORY_PAGE_SIZE) {
+      toggleBtn.hidden = true;
+    } else {
+      toggleBtn.hidden = false;
+      toggleBtn.textContent = showAll ? '收起' : `展开全部（还有 ${filtered.length - HISTORY_PAGE_SIZE} 条）`;
+    }
+    el.innerHTML = visible.map(e => {
       const meta = MOOD_META[e.mood];
       const tags = (e.tags || []).map(t => `<span class="history-tag">${t}</span>`).join('');
       return `
@@ -1850,11 +1867,18 @@
     return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  document.getElementById('historySearch').addEventListener('input', () => renderHistory());
+  document.getElementById('historySearch').addEventListener('input', () => {
+    historyExpanded = false;
+    renderHistory();
+  });
   document.getElementById('historyList').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-del]');
     if (!btn) return;
     deleteEntry(btn.dataset.del);
+    renderHistory();
+  });
+  document.getElementById('historyToggleBtn').addEventListener('click', () => {
+    historyExpanded = !historyExpanded;
     renderHistory();
   });
 
