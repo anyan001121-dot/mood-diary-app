@@ -1349,3 +1349,104 @@ textarea, .text-input {
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+/* 负面情绪即时关怀 sheet：点低落/很糟后原地展开，不跳转页面 */
+.care-flow-sheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.cf-lead {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.75;
+  margin: 4px 0 22px;
+  text-align: center;
+  white-space: pre-line;
+}
+.cf-question {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  margin: 4px 0 18px;
+}
+.cf-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.cf-actions .btn { margin-top: 0; }
+.cf-btn-text {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 10px 0 2px;
+}
+.cf-reason-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.cf-reason-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 10px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+.cf-reason-btn:active { background: var(--accent-soft); }
+.cf-back {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.cf-orb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0 6px;
+}
+.cf-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 14px var(--accent-soft);
+  animation: cfBreathe 8s ease-in-out infinite;
+}
+@keyframes cfBreathe {
+  0%, 100% { transform: scale(0.85); }
+  50% { transform: scale(1.05); }
+}
+.cf-orb-phase {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 48px;
+  white-space: pre-line;
+}
+.cf-note-textarea {
+  width: 100%;
+  min-height: 90px;
+  margin-bottom: 14px;
+}

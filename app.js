@@ -1054,14 +1054,20 @@
       setTimeout(() => todaySlot.classList.remove('just-grown'), 700);
     }
 
-    const bubble = document.getElementById('detailBubble');
-    document.getElementById('detailBubbleText').textContent = PLANT_MESSAGES[score];
-    bubble.hidden = false;
-    bubble.classList.remove('anim');
-    void bubble.offsetWidth; // 强制重排，让淡入动画每次都能重新播放
-    bubble.classList.add('anim');
-    clearTimeout(quickLogMood._hideTimer);
-    quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 9000);
+    // 低落/很糟：用户已经明确说了"我现在不舒服"，产品不该还要求用户继续填表——
+    // 立即原地给出关怀 sheet，而不是一句轻描淡写的"记下了"。
+    if (score === 1 || score === 2) {
+      openCareFlow(entry.id, score);
+    } else {
+      const bubble = document.getElementById('detailBubble');
+      document.getElementById('detailBubbleText').textContent = PLANT_MESSAGES[score];
+      bubble.hidden = false;
+      bubble.classList.remove('anim');
+      void bubble.offsetWidth; // 强制重排，让淡入动画每次都能重新播放
+      bubble.classList.add('anim');
+      clearTimeout(quickLogMood._hideTimer);
+      quickLogMood._hideTimer = setTimeout(() => { bubble.hidden = true; }, 9000);
+    }
 
     if (total > 0 && total % GARDEN_MILESTONE === 0) {
       celebrateMilestone();
@@ -1072,6 +1078,332 @@
     const btn = e.target.closest('.quick-mood-btn');
     if (!btn) return;
     quickLogMood(Number(btn.dataset.mood));
+  });
+
+  // ---------- Adaptive Care Flow：负面情绪的即时关怀 ----------
+  // 核心原则：先回应，再询问，再行动；状态越差，交互负担越小。
+  // 全程在一个原地展开的 bottom sheet 里完成，不跳转页面——背后的花园始终都在。
+  const CF_INTRO = {
+    2: {
+      lead: '今天好像有点难熬。\n不急着让自己马上好起来。\n我先陪你缓一下。',
+      primary: { label: '和我待一会儿', action: 'breathing' },
+      secondary: { label: '我想说说发生了什么', action: 'reasonL1' },
+      tertiary: { label: '先记下来就好', action: 'close' },
+    },
+    1: {
+      lead: '今天可能真的很不好受。\n现在不用解释发生了什么，也不用逼自己马上振作。\n先让这一刻稍微容易一点。',
+      primary: { label: '陪我缓 1 分钟', action: 'breathing' },
+      secondary: { label: '我想说一点', action: 'reasonL1' },
+      tertiary: { label: '现在什么都不想做', action: 'refusal' },
+    },
+  };
+
+  const CF_REASONS_L1 = [
+    { key: '工作学业', label: '工作 / 学业' },
+    { key: '人际关系', label: '和人的关系' },
+    { key: '睡眠', label: '身体 / 睡眠' },
+    { key: '财务', label: '钱' },
+    { key: '独处', label: '一个人待着' },
+    { key: '说不上来', label: '说不上来' },
+  ];
+
+  const CF_RELATIONSHIP_L2 = [
+    { label: '朋友', reasonKey: '人际关系' },
+    { label: '伴侣', reasonKey: '人际关系' },
+    { label: '家庭', reasonKey: '家庭' },
+    { label: '同事', reasonKey: '人际关系' },
+    { label: '其他', reasonKey: '人际关系' },
+  ];
+
+  const CF_RESPONSES = {
+    '工作学业': {
+      lead: '最近是不是被事情压得有点满？\n现在不用把整个问题解决。我们只找下一件最小的事情。',
+      primary: { label: '帮我把事情拆小', action: 'note', notePrompt: '下一步，最小的一件事是什么？' },
+      secondary: { label: '我现在只想休息', action: 'breathing' },
+    },
+    '人际关系': {
+      lead: '和人的事情，有时候真的很消耗。\n现在不用急着判断谁对谁错。可以先照顾一下自己的感受。',
+      primary: { label: '帮我理一理', action: 'note', notePrompt: '发生了什么？它让你有什么感觉？' },
+      secondary: { label: '我想先离开这件事', action: 'breathing' },
+    },
+    '家庭': {
+      lead: '越重要的人，有时候越容易让我们难受。\n今天不用同时处理自己的情绪和所有人的情绪。',
+      primary: { label: '让我缓一下', action: 'breathing' },
+      secondary: { label: '我想写下来', action: 'note', notePrompt: '想写下来的话，就写在这里。' },
+    },
+    '睡眠': {
+      lead: '你可能真的有点累了。\n没休息好的时候，很多原本能承受的事情都会变得更难。',
+      primary: { label: '陪我放松 2 分钟', action: 'breathing' },
+      secondary: { label: '今晚早点停下来', action: 'acknowledge', message: '好，那今晚早点让自己躺下。' },
+    },
+    '财务': {
+      lead: '钱的事情很容易让很多问题一起涌上来。\n先不用解决全部。我们只分清楚一件今天必须处理的事。',
+      primary: { label: '帮我理一下', action: 'note', notePrompt: '今天必须处理的一件事是什么？' },
+      secondary: { label: '今天先不处理', action: 'acknowledge', message: '好，今天先不处理，也没关系。' },
+    },
+    '说不上来': {
+      lead: '不知道为什么难受，也没关系。\n我们不一定要找到原因，才能允许自己休息。',
+      primary: { label: '陪我缓一下', action: 'breathing' },
+    },
+  };
+
+  let careFlowEntryId = null;
+  let careFlowMood = null;
+  let careFlowTrigger = null;
+  const careFlowTimers = [];
+
+  function clearCareFlowTimers() {
+    careFlowTimers.forEach(t => clearTimeout(t));
+    careFlowTimers.length = 0;
+  }
+
+  function openCareFlow(entryId, mood) {
+    careFlowEntryId = entryId;
+    careFlowMood = mood;
+    careFlowTrigger = null;
+    showCareFlowIntro();
+    const backdrop = document.getElementById('careFlowBackdrop');
+    const sheet = document.getElementById('careFlowSheet');
+    backdrop.hidden = false;
+    sheet.hidden = false;
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      sheet.classList.add('show');
+    });
+  }
+
+  function closeCareFlow() {
+    clearCareFlowTimers();
+    document.getElementById('careFlowBackdrop').classList.remove('show');
+    document.getElementById('careFlowSheet').classList.remove('show');
+    setTimeout(() => {
+      document.getElementById('careFlowBackdrop').hidden = true;
+      document.getElementById('careFlowSheet').hidden = true;
+    }, 300);
+  }
+
+  function setCareFlowBody(html) {
+    clearCareFlowTimers();
+    document.getElementById('careFlowBody').innerHTML = html;
+  }
+
+  function updateCareFlowTag(tag) {
+    if (!careFlowEntryId || !tag) return;
+    const entries = loadEntries();
+    const idx = entries.findIndex(e => e.id === careFlowEntryId);
+    if (idx === -1) return;
+    const tags = new Set(entries[idx].tags || []);
+    tags.add(tag);
+    entries[idx].tags = Array.from(tags);
+    saveEntries(entries);
+    careFlowTrigger = tag;
+  }
+
+  function showCareFlowIntro() {
+    const cfg = CF_INTRO[careFlowMood];
+    setCareFlowBody(`
+      <p class="cf-lead">${cfg.lead}</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-primary btn-block" data-cf="${cfg.primary.action}">${cfg.primary.label}</button>
+        <button type="button" class="btn btn-ghost btn-block" data-cf="${cfg.secondary.action}">${cfg.secondary.label}</button>
+        <button type="button" class="cf-btn-text" data-cf="${cfg.tertiary.action}">${cfg.tertiary.label}</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowReasonL1() {
+    setCareFlowBody(`
+      <button type="button" class="cf-back" data-cf="back-intro">‹ 返回</button>
+      <p class="cf-question">今天的不舒服，更像来自哪里？</p>
+      <div class="cf-reason-grid">
+        ${CF_REASONS_L1.map(r => `<button type="button" class="cf-reason-btn" data-cf="reason" data-key="${r.key}">${r.label}</button>`).join('')}
+      </div>
+    `);
+  }
+
+  function showCareFlowRelationshipL2() {
+    setCareFlowBody(`
+      <button type="button" class="cf-back" data-cf="reasonL1">‹ 返回</button>
+      <p class="cf-question">和谁之间的事？</p>
+      <div class="cf-reason-grid">
+        ${CF_RELATIONSHIP_L2.map(o => `<button type="button" class="cf-reason-btn" data-cf="reason" data-key="${o.reasonKey}" data-tag="${o.reasonKey}">${o.label}</button>`).join('')}
+      </div>
+    `);
+  }
+
+  function showCareFlowAloneSub() {
+    setCareFlowBody(`
+      <button type="button" class="cf-back" data-cf="reasonL1">‹ 返回</button>
+      <p class="cf-question">今天一个人待着，更像是？</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-ghost btn-block" data-cf="alone" data-key="lonely">有点孤单</button>
+        <button type="button" class="btn btn-ghost btn-block" data-cf="alone" data-key="comfortable">其实挺舒服</button>
+        <button type="button" class="btn btn-ghost btn-block" data-cf="alone" data-key="unsure">说不上来</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowAloneResponse(key) {
+    updateCareFlowTag('独处');
+    if (key === 'lonely') {
+      setCareFlowBody(`
+        <p class="cf-lead">要不要和世界产生一个很小的连接？\n比如，给朋友发一个表情。</p>
+        <div class="cf-actions">
+          <button type="button" class="btn btn-primary btn-block" data-cf="acknowledge" data-message="好，希望这个小小的连接，能让你感觉好一点。">就这样试试</button>
+          <button type="button" class="cf-btn-text" data-cf="close">先不了</button>
+        </div>
+      `);
+    } else {
+      const message = key === 'comfortable' ? '那就好好享受这段自己的时间。' : '说不清楚也没关系，不是所有感觉都需要被解释。';
+      setCareFlowBody(`
+        <p class="cf-lead">${message}</p>
+        <div class="cf-actions">
+          <button type="button" class="btn btn-ghost btn-block" data-cf="close">回到花园</button>
+        </div>
+      `);
+    }
+  }
+
+  function showCareFlowResponse(reasonKey) {
+    const cfg = CF_RESPONSES[reasonKey];
+    if (!cfg) { closeCareFlow(); return; }
+    const secondaryHtml = cfg.secondary
+      ? `<button type="button" class="btn btn-ghost btn-block" data-cf="${cfg.secondary.action}" data-prompt="${cfg.secondary.notePrompt || ''}" data-message="${cfg.secondary.message || ''}">${cfg.secondary.label}</button>`
+      : '';
+    setCareFlowBody(`
+      <p class="cf-lead">${cfg.lead}</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-primary btn-block" data-cf="${cfg.primary.action}" data-prompt="${cfg.primary.notePrompt || ''}" data-message="${cfg.primary.message || ''}">${cfg.primary.label}</button>
+        ${secondaryHtml}
+      </div>
+    `);
+  }
+
+  function showCareFlowNote(prompt) {
+    setCareFlowBody(`
+      <p class="cf-question">${prompt}</p>
+      <textarea class="cf-note-textarea" id="cfNoteInput" placeholder="想到什么就写什么"></textarea>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-primary btn-block" data-cf="save-note">保存</button>
+        <button type="button" class="cf-btn-text" data-cf="close">先不写了</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowAcknowledge(message) {
+    setCareFlowBody(`
+      <p class="cf-lead">${message}</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-ghost btn-block" data-cf="close">回到花园</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowRefusal() {
+    setCareFlowBody(`
+      <p class="cf-lead">好。\n那今天不用做什么。\n你愿意告诉我现在不好受，已经是一次照顾自己了。\n花园会替你把今天留在这里。</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-ghost btn-block" data-cf="close">回到花园</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowBreathing() {
+    setCareFlowBody(`
+      <div class="cf-orb-wrap">
+        <div class="cf-orb"></div>
+        <p class="cf-orb-phase" id="cfOrbPhase">先不用想发生了什么。</p>
+      </div>
+    `);
+    careFlowTimers.push(setTimeout(() => {
+      const el = document.getElementById('cfOrbPhase');
+      if (el) el.textContent = '慢慢吸气……\n慢慢呼气……';
+    }, 10000));
+    careFlowTimers.push(setTimeout(() => {
+      const el = document.getElementById('cfOrbPhase');
+      if (el) el.textContent = '放松一下肩膀。\n今天不用把所有事情解决。';
+    }, 30000));
+    careFlowTimers.push(setTimeout(showCareFlowFeedback, 60000));
+  }
+
+  function showCareFlowFeedback() {
+    setCareFlowBody(`
+      <p class="cf-question">现在呢？</p>
+      <div class="cf-actions">
+        <button type="button" class="btn btn-ghost btn-block" data-cf="feedback" data-value="better">好一点</button>
+        <button type="button" class="btn btn-ghost btn-block" data-cf="feedback" data-value="same">还是差不多</button>
+        <button type="button" class="btn btn-ghost btn-block" data-cf="feedback" data-value="worse">更难受了</button>
+        <button type="button" class="cf-btn-text" data-cf="close">不想回答</button>
+      </div>
+    `);
+  }
+
+  function showCareFlowFeedbackResponse(value) {
+    addCareLogEntry({ id: uid(), ts: Date.now(), kind: 'microcare', tier: careFlowMood, trigger: careFlowTrigger, feedback: value });
+    if (value === 'better') {
+      setCareFlowBody(`
+        <p class="cf-lead">那就停在这里也很好。\n不用因为好了一点，就马上继续努力。</p>
+        <div class="cf-actions">
+          <button type="button" class="btn btn-ghost btn-block" data-cf="close">先到这里</button>
+        </div>
+      `);
+    } else if (value === 'same') {
+      setCareFlowBody(`
+        <p class="cf-lead">没关系。\n有时候一分钟并不会改变什么。至少这一分钟，你没有要求自己解决所有事情。</p>
+        <div class="cf-actions">
+          <button type="button" class="btn btn-ghost btn-block" data-cf="reasonL1">换一种方式</button>
+          <button type="button" class="cf-btn-text" data-cf="close">今天就到这里</button>
+        </div>
+      `);
+    } else {
+      setCareFlowBody(`
+        <p class="cf-lead">看起来这个方法现在不太适合你。\n我们先不继续了。</p>
+        <div class="cf-actions">
+          <button type="button" class="btn btn-ghost btn-block" data-cf="acknowledge" data-message="希望身边那个人能接住你此刻的感受。">找一个信任的人</button>
+          <button type="button" class="btn btn-ghost btn-block" data-cf="music">换一个更安静的方法</button>
+          <button type="button" class="cf-btn-text" data-cf="close">今天先到这里</button>
+        </div>
+      `);
+    }
+  }
+
+  document.getElementById('careFlowBackdrop').addEventListener('click', closeCareFlow);
+  document.getElementById('careFlowBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-cf]');
+    if (!btn) return;
+    const action = btn.dataset.cf;
+    if (action === 'close') { closeCareFlow(); return; }
+    if (action === 'refusal') { showCareFlowRefusal(); return; }
+    if (action === 'reasonL1') { showCareFlowReasonL1(); return; }
+    if (action === 'back-intro') { showCareFlowIntro(); return; }
+    if (action === 'breathing') { showCareFlowBreathing(); return; }
+    if (action === 'alone') { showCareFlowAloneResponse(btn.dataset.key); return; }
+    if (action === 'note') { showCareFlowNote(btn.dataset.prompt || '想到什么就写什么。'); return; }
+    if (action === 'acknowledge') { showCareFlowAcknowledge(btn.dataset.message || '好，那就先这样。'); return; }
+    if (action === 'music') { AmbientAudio.play('pad'); syncMusicUI(); showCareFlowAcknowledge('放了一段安静的声音，会一直在背景陪着你。'); return; }
+    if (action === 'feedback') { showCareFlowFeedbackResponse(btn.dataset.value); return; }
+    if (action === 'save-note') {
+      const input = document.getElementById('cfNoteInput');
+      const val = input ? input.value.trim() : '';
+      if (val && careFlowEntryId) {
+        const entries = loadEntries();
+        const idx = entries.findIndex(x => x.id === careFlowEntryId);
+        if (idx !== -1) {
+          entries[idx].note = entries[idx].note ? entries[idx].note + '\n' + val : val;
+          saveEntries(entries);
+        }
+      }
+      showCareFlowAcknowledge('写下来了。谢谢你愿意花这一点时间陪自己。');
+      return;
+    }
+    if (action === 'reason') {
+      const key = btn.dataset.key;
+      if (key === '人际关系' && !btn.dataset.tag) { showCareFlowRelationshipL2(); return; }
+      if (key === '独处') { showCareFlowAloneSub(); return; }
+      const tag = btn.dataset.tag || (key === '说不上来' ? null : key);
+      if (tag) updateCareFlowTag(tag);
+      showCareFlowResponse(key);
+    }
   });
 
   document.getElementById('detailBubbleMoreBtn').addEventListener('click', () => {

@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -442,9 +442,16 @@
     <button type="button" class="care-plan-skip" id="speciesDiscoverCloseBtn">先收下</button>
   </div>
 
+  <!-- 负面情绪的即时关怀：点低落/很糟之后原地展开，不需要跳转页面 -->
+  <div class="bottom-sheet-backdrop" id="careFlowBackdrop" hidden></div>
+  <div class="bottom-sheet care-flow-sheet" id="careFlowSheet" hidden>
+    <div class="bottom-sheet-handle"></div>
+    <div id="careFlowBody"></div>
+  </div>
+
 </div>
 
-<script src="audio.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="audio.js?v=26"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
