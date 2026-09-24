@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -125,7 +125,8 @@
 
       <div class="card safety-banner" id="safetyBanner" hidden>
         <h3>最近几天，你持续记录到了比较低落的状态</h3>
-        <p class="muted small">不需要现在解决所有问题。如果这种状态持续，考虑和信任的人聊聊，或寻求专业的心理支持渠道，都是可以的。</p>
+        <p class="muted small">不需要现在解决所有问题。如果这种状态持续，考虑和信任的人聊聊，也可以拨打 12356（全国统一心理援助热线，24 小时可用），和专业的人聊一聊。</p>
+        <a class="btn btn-primary btn-block" href="tel:12356">拨打 12356</a>
         <button class="btn btn-ghost btn-block" id="safetyDismissBtn">知道了，继续记录</button>
       </div>
 
@@ -371,6 +372,21 @@
         </div>
       </div>
 
+      <div class="card">
+        <h3>AI 智能关怀（实验性）</h3>
+        <p class="muted small">默认关闭。开启后需要你自己的 Anthropic API Key——对话内容会直接从这台设备发送到 Anthropic，不会经过我们的任何服务器，我们也看不到、存不到你的 Key 或聊天内容。AI 不能替代专业帮助，也不负责判断你是否安全，这部分始终由本地规则处理。</p>
+        <div class="field">
+          <label for="aiApiKeyInput">Anthropic API Key</label>
+          <input type="password" id="aiApiKeyInput" class="text-input" placeholder="sk-ant-...">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="aiSaveKeyBtn">保存并开启</button>
+          <button class="btn btn-danger-ghost" id="aiClearKeyBtn">清除</button>
+        </div>
+        <p class="muted small" id="aiKeyStatus">当前未设置</p>
+        <button class="btn btn-ghost btn-block" id="aiOpenChatBtn" disabled>开始和 AI 聊聊</button>
+      </div>
+
       <div class="card roadmap-card">
         <h3>项目规划</h3>
         <p class="muted small">这个项目还在持续更新。这里记录已经做了什么，以及接下来打算做什么。</p>
@@ -379,10 +395,11 @@
         <ul class="roadmap-list">
           <li>情绪记录：三步渐进式记录（强度 → 关联因素 → 一句话），一天可以记录多次</li>
           <li>花园：每条记录种下一朵花，点开是完整的情绪记忆；每天进入花园有机会遇到一件小事</li>
-          <li>自我关怀：按心情和关联因素自动匹配方案，一键直接开始对应的练习</li>
+          <li>自我关怀：点低落/很糟会立即原地弹出关怀方案，不用跳转页面；按心情和关联因素自动匹配，一键直接开始对应的练习</li>
           <li>发现（原洞察）：先给出可能的关联发现，再看趋势图表和情绪日历</li>
           <li>延迟回访：低落的记录过几小时后，会主动问一句现在怎么样了</li>
           <li>植物图鉴：记录强度较高时会长出不同品种的花，目前收录 13 种（第一版，素材会逐步替换）</li>
+          <li>安全支持：补充细节或聊天时如果出现明确的自伤/自杀意图表达，会弹出独立的引导界面，提供 12356 全国心理援助热线（24 小时可用）；连续几天记录到低落，也会主动提示这个号码</li>
           <li>去掉了"连续打卡天数"，换成更贴合这个产品调性的月度记录统计</li>
         </ul>
 
@@ -390,7 +407,7 @@
         <ul class="roadmap-list">
           <li>植物图鉴的素材：从现在的程序化调色，逐步换成更精致的手绘或生成素材</li>
           <li>花园的生命周期：记录到一定次数解锁新的场景细节，累计一定天数后开启下一片主题花园</li>
-          <li>AI 辅助的关怀文案（已完成规划，未开始开发）：分三步做——先理解自由书写的文字，再让多个关联因素合成更自然的话，最后是长期回顾总结。会新增一个"AI 智能关怀"开关，默认关闭，打开后也是分项授权，不会默默把数据发出去</li>
+          <li>AI 陪聊（v0 已上线）：需要你自己的 Anthropic API Key（在这个页面下面设置），默认关闭，对话直接从你的设备发到 Anthropic，我们看不到也不存 Key 或聊天内容。目前只有最基础的自由对话，让多个关联因素合成更自然的话、长期回顾总结这些还没做</li>
         </ul>
       </div>
     </section>
@@ -405,6 +422,22 @@
         <p class="muted small" id="speciesProgressText">已发现 0/13 种</p>
         <p class="muted small">强度比较高的记录，会结合当时的关联因素长出不同的品种——同一种心情，也可能开出不一样的花。</p>
         <div class="species-grid" id="speciesGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============ AI 陪聊（实验性，需要用户自己的 API Key） ============ -->
+    <section class="view" id="view-ai-chat">
+      <div class="card ai-chat-card">
+        <div class="card-title-row">
+          <h2 style="margin:0">AI 陪聊</h2>
+          <button class="btn-ghost" data-nav="home" style="border:none;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer">返回花园</button>
+        </div>
+        <p class="muted small">对话直接从这台设备发送到 Anthropic，不经过我们的服务器。AI 不能替代专业帮助。</p>
+        <div class="ai-chat-messages" id="aiChatMessages"></div>
+        <div class="ai-chat-input-row">
+          <textarea id="aiChatInput" rows="1" placeholder="想到什么，说出来就好"></textarea>
+          <button type="button" id="aiChatSendBtn">发送</button>
+        </div>
       </div>
     </section>
 
@@ -449,9 +482,18 @@
     <div id="careFlowBody"></div>
   </div>
 
+  <!-- 即时风险检测触发的独立安全引导，不用呼吸/音乐/种花替代真实的求助资源 -->
+  <div class="bottom-sheet-backdrop" id="safetyFlowBackdrop" hidden></div>
+  <div class="species-discover-card safety-flow-card" id="safetyFlowCard" hidden>
+    <h3>看起来你现在可能正在经历很艰难的时刻</h3>
+    <p class="muted small">如果愿意，可以拨打 12356（全国统一心理援助热线，24 小时可用），和专业的人聊一聊。或者，把这句话读给一个你信任的人听，也是可以的。</p>
+    <a class="btn btn-primary btn-block" href="tel:12356">拨打 12356</a>
+    <button type="button" class="care-plan-skip" id="safetyFlowCloseBtn">先不联系，回到花园</button>
+  </div>
+
 </div>
 
-<script src="audio.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="audio.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

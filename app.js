@@ -239,13 +239,13 @@
   }
 
   // ---------- navigation ----------
-  const views = ['home', 'log', 'insight', 'care', 'history', 'species'];
+  const views = ['home', 'log', 'insight', 'care', 'history', 'species', 'ai-chat'];
   function showView(name) {
     views.forEach(v => {
       document.getElementById('view-' + v).classList.toggle('active', v === name);
     });
-    // 植物图鉴是花园的子页面，不在底部导航里，切过去时保留"花园"的高亮状态
-    if (name !== 'species') {
+    // 植物图鉴和 AI 陪聊都是子页面，不在底部导航里，切过去时保留"花园"的高亮状态
+    if (name !== 'species' && name !== 'ai-chat') {
       document.querySelectorAll('.tab-item').forEach(el => {
         el.classList.toggle('active', el.dataset.nav === name);
       });
@@ -253,8 +253,9 @@
     if (name === 'home') renderHome();
     if (name === 'insight') renderInsight();
     if (name === 'care') renderCare();
-    if (name === 'history') renderHistory();
+    if (name === 'history') { renderHistory(); renderAiSettingsUI(); }
     if (name === 'species') renderSpeciesGuide();
+    if (name === 'ai-chat') renderAiChat();
     window.scrollTo(0, 0);
   }
   document.addEventListener('click', (e) => {
@@ -410,6 +411,7 @@
 
     showView('home');
     checkSpeciesDiscovery(fields);
+    if (checkSafetyRisk(fields.note)) showSafetyFlow();
   }
 
   document.getElementById('saveEntryBtn').addEventListener('click', saveCheckinEntry);
@@ -526,6 +528,191 @@
     const todayStr = dayKey(Date.now());
     banner.hidden = !(consecutive >= 3 && dismissedDate !== todayStr);
   }
+
+  // 即时风险检测：窄而准的短语匹配，不是诊断，也不是全面的风险识别系统。
+  // 只能抓住明确、直接的自伤/自杀意图表达，抓不住间接的求助信号（比如"感觉很累""撑不下去了"
+  // 这类话不会触发）。宁可漏掉一些，也不用单字匹配（比如"死"）——那样"笑死了""累死了"这种
+  // 日常夸张说法也会被算进来，误报只会让用户觉得被过度反应，反而失去信任。
+  // 全程只在本地做字符串匹配，不发送到任何地方，和"数据不上传"的承诺不冲突。
+  const SAFETY_RISK_PHRASES = [
+    '不想活了', '不想活下去', '活着没有意义', '活着没意思', '活着没有意思',
+    '我想自杀', '我要自杀', '想要自杀', '计划自杀',
+    '结束自己的生命', '结束生命', '了结自己',
+    '我想死', '好想死', '死了算了', '死掉算了', '不如死了', '真的想死',
+    '想要离开这个世界', '不想在这个世界上了',
+    '轻生',
+    '想伤害自己', '想自残', '开始自残', '割腕', '割手',
+    '没有人会在意我死了', '没人会在意我消失',
+  ];
+
+  function checkSafetyRisk(text) {
+    if (!text) return false;
+    return SAFETY_RISK_PHRASES.some(phrase => text.includes(phrase));
+  }
+
+  function showSafetyFlow() {
+    const backdrop = document.getElementById('safetyFlowBackdrop');
+    const card = document.getElementById('safetyFlowCard');
+    backdrop.hidden = false;
+    card.hidden = false;
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      card.classList.add('show');
+    });
+  }
+  function closeSafetyFlow() {
+    document.getElementById('safetyFlowBackdrop').classList.remove('show');
+    document.getElementById('safetyFlowCard').classList.remove('show');
+    setTimeout(() => {
+      document.getElementById('safetyFlowBackdrop').hidden = true;
+      document.getElementById('safetyFlowCard').hidden = true;
+    }, 300);
+  }
+  document.getElementById('safetyFlowCloseBtn').addEventListener('click', closeSafetyFlow);
+  document.getElementById('safetyFlowBackdrop').addEventListener('click', closeSafetyFlow);
+
+  // ---------- AI 陪聊（BYOK：用户自己的 API Key，直连 Anthropic，不经过我们的服务器） ----------
+  // 架构上刻意选这条路：静态站点没有后端，任何我们自己的 API Key 放进前端都会被扒走；
+  // 让用户用自己的 Key 直接从浏览器调用 Anthropic（官方支持的 anthropic-dangerous-direct-browser-access
+  // 头），我们完全看不到 Key 也看不到对话内容，"数据不上传到我们的服务器"这句承诺不受影响。
+  const AI_SETTINGS_KEY = 'moodDiary.aiSettings.v1';
+  const AI_CHAT_MODEL = 'claude-haiku-4-5-20251001';
+  const AI_CHAT_SYSTEM_PROMPT = [
+    '你是"心情日记"App里的一个轻量情绪陪伴助手。',
+    '- 只做共情式的陪伴和倾听，不诊断任何心理或精神状态，不给医疗或药物建议，不自称心理咨询师或治疗师',
+    '- 每次回复最多 2-3 句话，不要长篇分析，不要列点',
+    '- 可以温和地提出一个开放式问题，帮助用户说出还没想清楚或不太愿意直接说出口的感受，但每次最多问一个问题，不追问隐私细节',
+    '- 语气：不评判、不说教、不强行积极、不说"你应该"',
+    '- 如果内容让你觉得用户可能有自伤或自杀的风险，只回复"这句话我想认真对待，请先等一下。"然后不要再说别的——应用会接管后续的安全引导，这部分不需要你处理',
+  ].join('\n');
+
+  function loadAiSettings() {
+    try { return JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) || { enabled: false, apiKey: '' }; }
+    catch (e) { return { enabled: false, apiKey: '' }; }
+  }
+  function saveAiSettings(settings) {
+    localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  function renderAiSettingsUI() {
+    const settings = loadAiSettings();
+    const statusEl = document.getElementById('aiKeyStatus');
+    const openBtn = document.getElementById('aiOpenChatBtn');
+    if (!statusEl || !openBtn) return;
+    if (settings.enabled && settings.apiKey) {
+      statusEl.textContent = '已设置，AI 聊天已开启';
+      openBtn.disabled = false;
+    } else {
+      statusEl.textContent = '当前未设置';
+      openBtn.disabled = true;
+    }
+  }
+
+  document.getElementById('aiSaveKeyBtn').addEventListener('click', () => {
+    const input = document.getElementById('aiApiKeyInput');
+    const key = input.value.trim();
+    if (!key) return;
+    saveAiSettings({ enabled: true, apiKey: key });
+    input.value = '';
+    renderAiSettingsUI();
+  });
+  document.getElementById('aiClearKeyBtn').addEventListener('click', () => {
+    saveAiSettings({ enabled: false, apiKey: '' });
+    document.getElementById('aiApiKeyInput').value = '';
+    renderAiSettingsUI();
+  });
+  document.getElementById('aiOpenChatBtn').addEventListener('click', () => {
+    showView('ai-chat');
+  });
+
+  // 聊天记录只保存在内存里，离开这个视图/刷新页面就清空——不把可能很私密的对话
+  // 写进 localStorage，进一步降低共享设备上的暴露风险。
+  let aiChatHistory = [];
+
+  function appendAiChatMessage(role, text) {
+    const el = document.createElement('div');
+    el.className = 'ai-chat-msg ' + (role === 'user' ? 'ai-chat-msg-user' : 'ai-chat-msg-ai');
+    el.textContent = text;
+    const wrap = document.getElementById('aiChatMessages');
+    wrap.appendChild(el);
+    wrap.scrollTop = wrap.scrollHeight;
+    return el;
+  }
+
+  function renderAiChat() {
+    aiChatHistory = [];
+    document.getElementById('aiChatMessages').innerHTML = '';
+    appendAiChatMessage('assistant', '你好，这里可以随便聊聊。想到什么，说出来就好。');
+  }
+
+  async function callClaude(messages) {
+    const settings = loadAiSettings();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: AI_CHAT_MODEL,
+        max_tokens: 300,
+        system: AI_CHAT_SYSTEM_PROMPT,
+        messages,
+      }),
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    return (data.content && data.content[0] && data.content[0].text) || '（没有收到回复）';
+  }
+
+  async function sendAiChatMessage() {
+    const input = document.getElementById('aiChatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // 本地关键词检测是第一道、也是最主要的一道防线：命中的话直接不发给 AI。
+    if (checkSafetyRisk(text)) {
+      input.value = '';
+      showSafetyFlow();
+      return;
+    }
+
+    const settings = loadAiSettings();
+    if (!settings.enabled || !settings.apiKey) {
+      appendAiChatMessage('assistant', '还没有设置 API Key，去"我的"页开启一下吧。');
+      return;
+    }
+
+    appendAiChatMessage('user', text);
+    aiChatHistory.push({ role: 'user', content: text });
+    input.value = '';
+
+    const sendBtn = document.getElementById('aiChatSendBtn');
+    sendBtn.disabled = true;
+    const placeholderEl = appendAiChatMessage('assistant', '……');
+
+    try {
+      const reply = await callClaude(aiChatHistory);
+      placeholderEl.textContent = reply;
+      aiChatHistory.push({ role: 'assistant', content: reply });
+      // 第二道防线：万一 AI 自己的措辞里出现了风险表达，同样触发安全引导。
+      if (checkSafetyRisk(reply)) showSafetyFlow();
+    } catch (err) {
+      placeholderEl.textContent = '这次没能连上 AI，可能是网络问题或者 API Key 不对，可以去"我的"页检查一下。';
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('aiChatSendBtn').addEventListener('click', sendAiChatMessage);
+  document.getElementById('aiChatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendAiChatMessage();
+    }
+  });
 
   const safetyDismissBtn = document.getElementById('safetyDismissBtn');
   if (safetyDismissBtn) {
@@ -1201,11 +1388,16 @@
 
   function showCareFlowIntro() {
     const cfg = CF_INTRO[careFlowMood];
+    const aiSettings = loadAiSettings();
+    const aiBtn = (aiSettings.enabled && aiSettings.apiKey)
+      ? `<button type="button" class="btn btn-ghost btn-block" data-cf="ai-chat">和 AI 聊一聊</button>`
+      : '';
     setCareFlowBody(`
       <p class="cf-lead">${cfg.lead}</p>
       <div class="cf-actions">
         <button type="button" class="btn btn-primary btn-block" data-cf="${cfg.primary.action}">${cfg.primary.label}</button>
         <button type="button" class="btn btn-ghost btn-block" data-cf="${cfg.secondary.action}">${cfg.secondary.label}</button>
+        ${aiBtn}
         <button type="button" class="cf-btn-text" data-cf="${cfg.tertiary.action}">${cfg.tertiary.label}</button>
       </div>
     `);
@@ -1377,6 +1569,7 @@
     if (action === 'reasonL1') { showCareFlowReasonL1(); return; }
     if (action === 'back-intro') { showCareFlowIntro(); return; }
     if (action === 'breathing') { showCareFlowBreathing(); return; }
+    if (action === 'ai-chat') { closeCareFlow(); showView('ai-chat'); return; }
     if (action === 'alone') { showCareFlowAloneResponse(btn.dataset.key); return; }
     if (action === 'note') { showCareFlowNote(btn.dataset.prompt || '想到什么就写什么。'); return; }
     if (action === 'acknowledge') { showCareFlowAcknowledge(btn.dataset.message || '好，那就先这样。'); return; }
@@ -1393,7 +1586,12 @@
           saveEntries(entries);
         }
       }
-      showCareFlowAcknowledge('写下来了。谢谢你愿意花这一点时间陪自己。');
+      if (checkSafetyRisk(val)) {
+        closeCareFlow();
+        showSafetyFlow();
+      } else {
+        showCareFlowAcknowledge('写下来了。谢谢你愿意花这一点时间陪自己。');
+      }
       return;
     }
     if (action === 'reason') {
