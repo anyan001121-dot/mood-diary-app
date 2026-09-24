@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 
@@ -115,7 +115,7 @@
       <div class="card delayed-checkin-card" id="delayedCheckinCard" hidden>
         <h3 id="delayedCheckinGreeting">下午好</h3>
         <p class="muted small" id="delayedCheckinText"></p>
-        <div class="care-feedback-row">
+        <div class="care-feedback-row" id="delayedCheckinRow">
           <button type="button" class="care-feedback-btn" id="delayedCheckinBetter" data-value="better">好一点了</button>
           <button type="button" class="care-feedback-btn" id="delayedCheckinSame" data-value="same">差不多</button>
           <button type="button" class="care-feedback-btn" id="delayedCheckinWorse" data-value="worse">还是不太好</button>
@@ -285,8 +285,9 @@
       </div>
 
       <div class="card care-feedback-card" id="careFeedbackCard" hidden>
-        <h3>现在感觉怎么样？</h3>
-        <div class="care-feedback-row">
+        <h3 id="careFeedbackTitle">现在感觉怎么样？</h3>
+        <p class="muted small" id="careFeedbackReplyText" hidden></p>
+        <div class="care-feedback-row" id="careFeedbackRow">
           <button type="button" class="care-feedback-btn" data-value="better">好一点</button>
           <button type="button" class="care-feedback-btn" data-value="same">差不多</button>
           <button type="button" class="care-feedback-btn" data-value="worse">更糟</button>
@@ -508,7 +509,7 @@
 
 </div>
 
-<script src="audio.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="audio.js?v=34"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

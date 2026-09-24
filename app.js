@@ -182,6 +182,16 @@
     return entry;
   }
 
+  // 用户给完反馈之后，永远不要只回一句"知道了"——每种反馈都值得一句
+  // 真正接住这个反馈的话。"不想回答"除外：那是在表达不想被继续追问，
+  // 尊重这个选择的方式是不再多说，而不是也塞一句话过去。
+  function careFeedbackReply(value) {
+    if (value === 'better') return '太好了，哪怕只是好一点点，也很值得为自己高兴。';
+    if (value === 'same') return '没关系，感觉不会说变就变，你已经在好好陪自己了。';
+    if (value === 'worse') return '谢谢你愿意说出来。如果现在真的很难受，不用一个人扛着，慢慢来。';
+    return null;
+  }
+
   // 延迟回访：记下哪些低落记录已经被"回访"过（回答了或明确不想回答），
   // 避免同一条记录被反复追问。这是 Before → Intervention → After 数据链路的第一步。
   const DELAYED_CHECKIN_KEY = 'moodDiary.delayedCheckins.v1';
@@ -869,6 +879,7 @@
     if (!entry) { card.hidden = true; return; }
     document.getElementById('delayedCheckinGreeting').textContent = timeGreeting() + '。';
     document.getElementById('delayedCheckinText').textContent = buildDelayedCheckinText(entry);
+    document.getElementById('delayedCheckinRow').hidden = false;
     card.dataset.entryId = entry.id;
     card.hidden = false;
   }
@@ -878,9 +889,13 @@
       const card = document.getElementById('delayedCheckinCard');
       const entryId = card.dataset.entryId;
       if (entryId) markDelayedCheckin(entryId, btn.dataset.value);
-      card.hidden = true;
-      if (btn.dataset.value !== 'skip') {
-        showToast(btn.dataset.value === 'better' ? '好的，谢谢你告诉我们。' : '好，我们知道了。');
+      const reply = careFeedbackReply(btn.dataset.value);
+      if (reply) {
+        document.getElementById('delayedCheckinRow').hidden = true;
+        document.getElementById('delayedCheckinText').textContent = reply;
+        setTimeout(() => { card.hidden = true; }, 3200);
+      } else {
+        card.hidden = true;
       }
     });
   });
@@ -2139,6 +2154,9 @@
   function showCareFeedback() {
     if (!pendingCareContext) return;
     const card = document.getElementById('careFeedbackCard');
+    document.getElementById('careFeedbackTitle').hidden = false;
+    document.getElementById('careFeedbackRow').hidden = false;
+    document.getElementById('careFeedbackReplyText').hidden = true;
     card.hidden = false;
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -2151,8 +2169,21 @@
           kind: pendingCareContext.kind, tier: pendingCareContext.tier, trigger: pendingCareContext.trigger,
           feedback: btn.dataset.value,
         });
+        const reply = careFeedbackReply(btn.dataset.value);
+        const card = document.getElementById('careFeedbackCard');
+        if (reply) {
+          document.getElementById('careFeedbackTitle').hidden = true;
+          document.getElementById('careFeedbackRow').hidden = true;
+          const replyEl = document.getElementById('careFeedbackReplyText');
+          replyEl.textContent = reply;
+          replyEl.hidden = false;
+          setTimeout(() => { card.hidden = true; }, 3200);
+        } else {
+          card.hidden = true;
+        }
+      } else {
+        document.getElementById('careFeedbackCard').hidden = true;
       }
-      document.getElementById('careFeedbackCard').hidden = true;
       pendingCareContext = null;
     });
   });
