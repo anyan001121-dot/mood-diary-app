@@ -640,7 +640,7 @@
     const speciesLink = document.getElementById('speciesLinkText');
     if (speciesLink) {
       const discovered = computeDiscoveredSpecies();
-      speciesLink.textContent = `🌿 植物图鉴 · 已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
+      speciesLink.textContent = `植物图鉴 · 已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
     }
     const days7 = dailyAverages(7);
 
@@ -651,8 +651,8 @@
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const careDaysThisMonth = new Set(entries.filter(e => e.ts >= monthStart).map(e => dayKey(e.ts))).size;
     document.getElementById('careDaysLine').textContent = careDaysThisMonth > 0
-      ? `🌱 这个月，你已经照顾了自己 ${careDaysThisMonth} 天`
-      : '🌱 这个月还没有记录，现在开始也不晚';
+      ? `这个月，你已经照顾了自己 ${careDaysThisMonth} 天`
+      : '这个月还没有记录，现在开始也不晚';
     document.getElementById('statTotal').textContent = entries.length;
     const withData = days7.filter(d => d.avg != null);
     const avg7 = withData.length ? (withData.reduce((s, d) => s + d.avg, 0) / withData.length) : null;
@@ -723,10 +723,10 @@
   // 每日花园事件：进入花园时，有一定概率发生一件轻量的小事——不是签到奖励，
   // 也不需要用户做任何事才能"赢"，只是让每天打开花园这件事多一点不确定性。
   const GARDEN_EVENTS = [
-    { id: 'butterfly', icon: '🦋', message: '今天来了一只蝴蝶。', detail: '', notePrompt: '今天有什么事情，让你觉得轻松了一点？', actionLabel: '说说看', action: 'note' },
-    { id: 'rain', icon: '🌧️', message: '花园今天下雨了。', detail: '有些日子不用开花，喝一点水也很好。', action: 'none' },
-    { id: 'snail', icon: '🐌', message: '草地上出现一只小蜗牛。', detail: '今天要不要慢一点？', actionLabel: '陪我慢下来', action: 'breathing' },
-    { id: 'sprout', icon: '🌱', message: '发现一株陌生的嫩芽。', detail: '再记录几次，看看它会长成什么样子。', action: 'none' },
+    { id: 'butterfly', message: '今天来了一只蝴蝶。', detail: '', notePrompt: '今天有什么事情，让你觉得轻松了一点？', actionLabel: '说说看', action: 'note' },
+    { id: 'rain', message: '花园今天下雨了。', detail: '有些日子不用开花，喝一点水也很好。', action: 'none' },
+    { id: 'snail', message: '草地上出现一只小蜗牛。', detail: '今天要不要慢一点？', actionLabel: '陪我慢下来', action: 'breathing' },
+    { id: 'sprout', message: '发现一株陌生的嫩芽。', detail: '再记录几次，看看它会长成什么样子。', action: 'none' },
   ];
   const GARDEN_EVENT_KEY = 'moodDiary.gardenEvent.v1';
   const GARDEN_EVENT_CHANCE = 0.45;
@@ -756,7 +756,6 @@
       ? GARDEN_EVENTS.find(e => e.id === state.eventId)
       : null;
     if (!event) { card.hidden = true; return; }
-    document.getElementById('gardenEventIcon').textContent = event.icon;
     document.getElementById('gardenEventMessage').textContent = event.message;
     document.getElementById('gardenEventDetail').textContent = event.detail || '';
     document.getElementById('gardenEventDetail').hidden = !event.detail;
@@ -990,7 +989,7 @@
     const entry = loadEntries().find(e => e.id === entryId);
     if (!entry) return;
     const days = Math.floor((startOfDay(Date.now()) - startOfDay(entry.ts)) / 86400000);
-    showToast(days <= 0 ? '🌱 这朵花是今天刚种下的。' : `🌱 这朵花已经陪你 ${days} 天了。`);
+    showToast(days <= 0 ? '这朵花是今天刚种下的。' : `这朵花已经陪你 ${days} 天了。`);
   }
 
   const gardenTimelineEl = document.getElementById('gardenTimeline');

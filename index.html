@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -16,6 +16,7 @@
   <header class="topbar">
     <div class="topbar-row">
       <div class="brand">
+        <img class="brand-icon" src="assets/favicon.png" alt="">
         <img class="brand-wordmark" src="assets/brand-wordmark.png" alt="心情日记">
       </div>
       <button class="music-btn" id="musicBtn" title="背景音乐">
@@ -70,7 +71,6 @@
 
         <div class="garden-event" id="gardenEvent" hidden>
           <div class="garden-event-row">
-            <span class="garden-event-icon" id="gardenEventIcon"></span>
             <div class="garden-event-text">
               <p id="gardenEventMessage"></p>
               <p class="muted small" id="gardenEventDetail"></p>
@@ -108,7 +108,7 @@
       </div>
 
       <button type="button" class="species-link" id="speciesLinkBtn" data-nav="species">
-        <span id="speciesLinkText">🌿 植物图鉴 · 已发现 0/13 种</span>
+        <span id="speciesLinkText">植物图鉴 · 已发现 0/13 种</span>
         <span class="species-link-arrow">›</span>
       </button>
 
@@ -137,7 +137,7 @@
       </div>
 
       <div class="card" id="homeStreakCard">
-        <p class="care-days-line" id="careDaysLine">🌱 这个月，你已经照顾了自己 0 天</p>
+        <p class="care-days-line" id="careDaysLine">这个月，你已经照顾了自己 0 天</p>
         <div class="stat-row">
           <div class="stat">
             <div class="stat-num" id="statTotal">0</div>
@@ -364,6 +364,29 @@
           <button class="btn btn-danger-ghost" id="clearBtn">清空所有数据</button>
         </div>
       </div>
+
+      <div class="card roadmap-card">
+        <h3>项目规划</h3>
+        <p class="muted small">这个项目还在持续更新。这里记录已经做了什么，以及接下来打算做什么。</p>
+
+        <h4 class="roadmap-subhead">已经上线</h4>
+        <ul class="roadmap-list">
+          <li>情绪记录：三步渐进式记录（强度 → 关联因素 → 一句话），一天可以记录多次</li>
+          <li>花园：每条记录种下一朵花，点开是完整的情绪记忆；每天进入花园有机会遇到一件小事</li>
+          <li>自我关怀：按心情和关联因素自动匹配方案，一键直接开始对应的练习</li>
+          <li>发现（原洞察）：先给出可能的关联发现，再看趋势图表和情绪日历</li>
+          <li>延迟回访：低落的记录过几小时后，会主动问一句现在怎么样了</li>
+          <li>植物图鉴：记录强度较高时会长出不同品种的花，目前收录 13 种（第一版，素材会逐步替换）</li>
+          <li>去掉了"连续打卡天数"，换成更贴合这个产品调性的月度记录统计</li>
+        </ul>
+
+        <h4 class="roadmap-subhead">接下来打算做的</h4>
+        <ul class="roadmap-list">
+          <li>植物图鉴的素材：从现在的程序化调色，逐步换成更精致的手绘或生成素材</li>
+          <li>花园的生命周期：记录到一定次数解锁新的场景细节，累计一定天数后开启下一片主题花园</li>
+          <li>AI 辅助的关怀文案（评估中）：让自由书写的文字被更好地理解，多个关联因素能合成一段更自然的话——这部分涉及数据是否需要离开本机处理，隐私和成本上的取舍还在考虑，暂时没有开始做</li>
+        </ul>
+      </div>
     </section>
 
     <!-- ============ 情绪植物图鉴 ============ -->
@@ -415,7 +438,7 @@
 
 </div>
 
-<script src="audio.js?v=23"></script>
-<script src="app.js?v=23"></script>
+<script src="audio.js?v=24"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

@@ -112,6 +112,13 @@ img { max-width: 100%; }
   display: block;
 }
 
+.brand-icon {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+  display: block;
+}
+
 .topbar-sub {
   margin-top: 4px;
   font-size: 13px;
@@ -404,7 +411,6 @@ main {
   align-items: flex-start;
   gap: 10px;
 }
-.garden-event-icon { font-size: 22px; line-height: 1; }
 .garden-event-text { flex: 1; min-width: 0; }
 .garden-event-text p { margin: 0; }
 .garden-event-text p:first-child { font-size: 13.5px; color: var(--text); font-weight: 600; }
@@ -1309,3 +1315,23 @@ textarea, .text-input {
 .species-discover-img { width: 84px; height: 84px; object-fit: contain; margin-bottom: 10px; }
 .species-discover-card h3 { margin: 0 0 8px; font-size: 19px; }
 .species-discover-card p.muted { margin: 0 0 18px; }
+
+/* 项目规划 */
+.roadmap-subhead {
+  margin: 18px 0 8px;
+  font-size: 13.5px;
+  color: var(--accent-deep);
+}
+.roadmap-subhead:first-of-type { margin-top: 14px; }
+.roadmap-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.roadmap-list li {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
