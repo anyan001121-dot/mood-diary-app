@@ -244,7 +244,7 @@
     views.forEach(v => {
       document.getElementById('view-' + v).classList.toggle('active', v === name);
     });
-    // 植物图鉴和 AI 陪聊都是子页面，不在底部导航里，切过去时保留"花园"的高亮状态
+    // 植物图鉴和小萤陪聊都是子页面，不在底部导航里，切过去时保留"花园"的高亮状态
     if (name !== 'species' && name !== 'ai-chat') {
       document.querySelectorAll('.tab-item').forEach(el => {
         el.classList.toggle('active', el.dataset.nav === name);
@@ -571,16 +571,18 @@
   document.getElementById('safetyFlowCloseBtn').addEventListener('click', closeSafetyFlow);
   document.getElementById('safetyFlowBackdrop').addEventListener('click', closeSafetyFlow);
 
-  // ---------- AI 陪聊（BYOK：用户自己的 API Key，直连 Anthropic，不经过我们的服务器） ----------
+  // ---------- 小萤：花园里的小伙伴（BYOK：用户自己的 API Key，直连 Anthropic，不经过我们的服务器） ----------
   // 架构上刻意选这条路：静态站点没有后端，任何我们自己的 API Key 放进前端都会被扒走；
   // 让用户用自己的 Key 直接从浏览器调用 Anthropic（官方支持的 anthropic-dangerous-direct-browser-access
   // 头），我们完全看不到 Key 也看不到对话内容，"数据不上传到我们的服务器"这句承诺不受影响。
+  // "小萤"只是一个更自然的呈现方式（花园里的一只萤火虫，而不是一个生硬的"AI聊天"功能入口），
+  // 设置页和隐私说明里始终清楚写着它的话是 AI 生成的，不是刻意隐瞒。
   const AI_SETTINGS_KEY = 'moodDiary.aiSettings.v1';
   const AI_CHAT_MODEL = 'claude-haiku-4-5-20251001';
   const AI_CHAT_SYSTEM_PROMPT = [
-    '你是"心情日记"App里的一个轻量情绪陪伴助手。',
-    '- 只做共情式的陪伴和倾听，不诊断任何心理或精神状态，不给医疗或药物建议，不自称心理咨询师或治疗师',
-    '- 每次回复最多 2-3 句话，不要长篇分析，不要列点',
+    '你是"小萤"，一只住在用户情绪花园里的小萤火虫，性格温和、有耐心，说话自然、口语化，像朋友一样。',
+    '- 只做共情式的陪伴和倾听，不诊断任何心理或精神状态，不给医疗或药物建议，不自称心理咨询师、治疗师或AI',
+    '- 每次回复最多 2-3 句话，不要长篇分析，不要列点，不要用书面语',
     '- 可以温和地提出一个开放式问题，帮助用户说出还没想清楚或不太愿意直接说出口的感受，但每次最多问一个问题，不追问隐私细节',
     '- 语气：不评判、不说教、不强行积极、不说"你应该"',
     '- 如果内容让你觉得用户可能有自伤或自杀的风险，只回复"这句话我想认真对待，请先等一下。"然后不要再说别的——应用会接管后续的安全引导，这部分不需要你处理',
@@ -600,10 +602,10 @@
     const openBtn = document.getElementById('aiOpenChatBtn');
     if (!statusEl || !openBtn) return;
     if (settings.enabled && settings.apiKey) {
-      statusEl.textContent = '已设置，AI 聊天已开启';
+      statusEl.textContent = '小萤醒着，随时可以聊';
       openBtn.disabled = false;
     } else {
-      statusEl.textContent = '当前未设置';
+      statusEl.textContent = '小萤还在睡觉';
       openBtn.disabled = true;
     }
   }
@@ -630,19 +632,30 @@
   let aiChatHistory = [];
 
   function appendAiChatMessage(role, text) {
-    const el = document.createElement('div');
-    el.className = 'ai-chat-msg ' + (role === 'user' ? 'ai-chat-msg-user' : 'ai-chat-msg-ai');
-    el.textContent = text;
+    const bubble = document.createElement('div');
+    bubble.className = 'ai-chat-msg ' + (role === 'user' ? 'ai-chat-msg-user' : 'ai-chat-msg-ai');
+    let textTarget = bubble;
+    if (role !== 'user') {
+      const avatar = document.createElement('img');
+      avatar.className = 'ai-chat-avatar';
+      avatar.src = 'assets/sprite-firefly-avatar.png';
+      avatar.alt = '';
+      bubble.appendChild(avatar);
+      const span = document.createElement('span');
+      bubble.appendChild(span);
+      textTarget = span;
+    }
+    textTarget.textContent = text;
     const wrap = document.getElementById('aiChatMessages');
-    wrap.appendChild(el);
+    wrap.appendChild(bubble);
     wrap.scrollTop = wrap.scrollHeight;
-    return el;
+    return textTarget;
   }
 
   function renderAiChat() {
     aiChatHistory = [];
     document.getElementById('aiChatMessages').innerHTML = '';
-    appendAiChatMessage('assistant', '你好，这里可以随便聊聊。想到什么，说出来就好。');
+    appendAiChatMessage('assistant', '我是小萤，一直在你的花园里飞。想说什么，我都在听。');
   }
 
   async function callClaude(messages) {
@@ -681,7 +694,7 @@
 
     const settings = loadAiSettings();
     if (!settings.enabled || !settings.apiKey) {
-      appendAiChatMessage('assistant', '还没有设置 API Key，去"我的"页开启一下吧。');
+      appendAiChatMessage('assistant', '小萤还没醒，去"我的"页唤醒它吧。');
       return;
     }
 
@@ -700,7 +713,7 @@
       // 第二道防线：万一 AI 自己的措辞里出现了风险表达，同样触发安全引导。
       if (checkSafetyRisk(reply)) showSafetyFlow();
     } catch (err) {
-      placeholderEl.textContent = '这次没能连上 AI，可能是网络问题或者 API Key 不对，可以去"我的"页检查一下。';
+      placeholderEl.textContent = '小萤好像没听清，可能是网络问题或者 API Key 不对，可以去"我的"页检查一下。';
     } finally {
       sendBtn.disabled = false;
     }
@@ -1390,7 +1403,7 @@
     const cfg = CF_INTRO[careFlowMood];
     const aiSettings = loadAiSettings();
     const aiBtn = (aiSettings.enabled && aiSettings.apiKey)
-      ? `<button type="button" class="btn btn-ghost btn-block" data-cf="ai-chat">和 AI 聊一聊</button>`
+      ? `<button type="button" class="btn btn-ghost btn-block" data-cf="ai-chat">去找小萤说说</button>`
       : '';
     setCareFlowBody(`
       <p class="cf-lead">${cfg.lead}</p>

@@ -1458,7 +1458,7 @@ textarea, .text-input {
   margin-bottom: 14px;
 }
 
-/* AI 陪聊（BYOK） */
+/* 小萤陪聊（BYOK） */
 .ai-chat-messages {
   display: flex;
   flex-direction: column;
@@ -1481,6 +1481,16 @@ textarea, .text-input {
   background: var(--bg);
   color: var(--text);
   border-bottom-left-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ai-chat-avatar {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  margin-top: 2px;
 }
 .ai-chat-msg-user {
   align-self: flex-end;

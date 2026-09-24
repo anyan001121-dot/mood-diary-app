@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -373,18 +373,18 @@
       </div>
 
       <div class="card">
-        <h3>AI 智能关怀（实验性）</h3>
-        <p class="muted small">默认关闭。开启后需要你自己的 Anthropic API Key——对话内容会直接从这台设备发送到 Anthropic，不会经过我们的任何服务器，我们也看不到、存不到你的 Key 或聊天内容。AI 不能替代专业帮助，也不负责判断你是否安全，这部分始终由本地规则处理。</p>
+        <h3><img class="icon-img" src="assets/sprite-firefly-avatar.png" alt="">小萤（花园里的小伙伴）</h3>
+        <p class="muted small">小萤是住在你花园里的一只小萤火虫，愿意的话随时可以找它说说话。它的话由 AI 生成，需要你自己的 Anthropic API Key 才能醒过来——对话内容会直接从这台设备发送到 Anthropic，不会经过我们的任何服务器，我们也看不到、存不到你的 Key 或聊天内容。默认是关闭的。小萤不能替代专业帮助，也不负责判断你是否安全，这部分始终由本地规则处理。</p>
         <div class="field">
           <label for="aiApiKeyInput">Anthropic API Key</label>
           <input type="password" id="aiApiKeyInput" class="text-input" placeholder="sk-ant-...">
         </div>
         <div class="btn-row">
-          <button class="btn btn-primary" id="aiSaveKeyBtn">保存并开启</button>
+          <button class="btn btn-primary" id="aiSaveKeyBtn">保存并唤醒小萤</button>
           <button class="btn btn-danger-ghost" id="aiClearKeyBtn">清除</button>
         </div>
-        <p class="muted small" id="aiKeyStatus">当前未设置</p>
-        <button class="btn btn-ghost btn-block" id="aiOpenChatBtn" disabled>开始和 AI 聊聊</button>
+        <p class="muted small" id="aiKeyStatus">小萤还在睡觉</p>
+        <button class="btn btn-ghost btn-block" id="aiOpenChatBtn" disabled>去找小萤聊聊</button>
       </div>
 
       <div class="card roadmap-card">
@@ -407,7 +407,7 @@
         <ul class="roadmap-list">
           <li>植物图鉴的素材：从现在的程序化调色，逐步换成更精致的手绘或生成素材</li>
           <li>花园的生命周期：记录到一定次数解锁新的场景细节，累计一定天数后开启下一片主题花园</li>
-          <li>AI 陪聊（v0 已上线）：需要你自己的 Anthropic API Key（在这个页面下面设置），默认关闭，对话直接从你的设备发到 Anthropic，我们看不到也不存 Key 或聊天内容。目前只有最基础的自由对话，让多个关联因素合成更自然的话、长期回顾总结这些还没做</li>
+          <li>小萤（v0 已上线）：花园里的一只小萤火虫，需要你自己的 Anthropic API Key 才能醒过来（在这个页面上面设置），默认关闭，对话直接从你的设备发到 Anthropic，我们看不到也不存 Key 或聊天内容。目前只有最基础的自由对话，让多个关联因素合成更自然的话、长期回顾总结这些还没做</li>
         </ul>
       </div>
     </section>
@@ -425,17 +425,17 @@
       </div>
     </section>
 
-    <!-- ============ AI 陪聊（实验性，需要用户自己的 API Key） ============ -->
+    <!-- ============ 小萤（花园里的小伙伴，需要用户自己的 API Key 才能说话） ============ -->
     <section class="view" id="view-ai-chat">
       <div class="card ai-chat-card">
         <div class="card-title-row">
-          <h2 style="margin:0">AI 陪聊</h2>
+          <h2 style="margin:0">小萤</h2>
           <button class="btn-ghost" data-nav="home" style="border:none;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer">返回花园</button>
         </div>
-        <p class="muted small">对话直接从这台设备发送到 Anthropic，不经过我们的服务器。AI 不能替代专业帮助。</p>
+        <p class="muted small">小萤说的话由 AI 生成，对话直接从这台设备发送到 Anthropic，不经过我们的服务器。它不能替代专业帮助。</p>
         <div class="ai-chat-messages" id="aiChatMessages"></div>
         <div class="ai-chat-input-row">
-          <textarea id="aiChatInput" rows="1" placeholder="想到什么，说出来就好"></textarea>
+          <textarea id="aiChatInput" rows="1" placeholder="想跟小萤说点什么"></textarea>
           <button type="button" id="aiChatSendBtn">发送</button>
         </div>
       </div>
@@ -493,7 +493,7 @@
 
 </div>
 
-<script src="audio.js?v=28"></script>
-<script src="app.js?v=28"></script>
+<script src="audio.js?v=29"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>
