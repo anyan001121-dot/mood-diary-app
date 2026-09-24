@@ -2159,8 +2159,31 @@
     restEl.hidden = false;
   });
 
+  function renderFireflyCareCard() {
+    const settings = loadAiSettings();
+    const textEl = document.getElementById('fireflyCareText');
+    const btnEl = document.getElementById('fireflyCareBtn');
+    if (!textEl || !btnEl) return;
+    if (settings.enabled && settings.apiKey) {
+      textEl.textContent = '花园里的一只小萤火虫，想聊聊的时候随时可以找它。';
+      btnEl.textContent = '去找小萤聊聊';
+    } else {
+      textEl.textContent = '花园里住着一只小萤火虫，不过它还在睡觉——去"我的"页设置一下才能叫醒它。';
+      btnEl.textContent = '去唤醒小萤';
+    }
+  }
+  document.getElementById('fireflyCareBtn').addEventListener('click', () => {
+    const settings = loadAiSettings();
+    if (settings.enabled && settings.apiKey) {
+      showView('ai-chat');
+    } else {
+      showView('history');
+    }
+  });
+
   function renderCare() {
     renderCarePlanCard();
+    renderFireflyCareCard();
     document.getElementById('careFeedbackCard').hidden = true;
 
     document.getElementById('meditationList').innerHTML = MEDITATIONS.map((m, i) => `
