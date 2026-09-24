@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 
@@ -380,9 +380,18 @@
 
       <div class="card">
         <h3><img class="icon-img" src="assets/sprite-firefly-avatar.png" alt="">小萤（花园里的小伙伴）</h3>
-        <p class="muted small">小萤是住在你花园里的一只小萤火虫，愿意的话随时可以找它说说话。它的话由 AI 生成，需要你自己的 Anthropic API Key 才能醒过来——对话内容会直接从这台设备发送到 Anthropic，不会经过我们的任何服务器，我们也看不到、存不到你的 Key 或聊天内容。默认是关闭的。小萤不能替代专业帮助，也不负责判断你是否安全，这部分始终由本地规则处理。</p>
+        <p class="muted small">小萤是住在你花园里的一只小萤火虫，愿意的话随时可以找它说说话。它的话由 AI 生成，需要你自己的 API Key 才能醒过来——对话内容会直接从这台设备发送到你选的服务商，不会经过我们的任何服务器，我们也看不到、存不到你的 Key 或聊天内容。默认是关闭的。小萤不能替代专业帮助，也不负责判断你是否安全，这部分始终由本地规则处理。</p>
         <div class="field">
-          <label for="aiApiKeyInput">Anthropic API Key</label>
+          <label for="aiProviderSelect">AI 服务商</label>
+          <select id="aiProviderSelect" class="text-input">
+            <option value="anthropic">Anthropic（Claude）</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="zhipu">智谱 GLM</option>
+            <option value="qwen">通义千问（阿里云百炼）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="aiApiKeyInput">API Key</label>
           <input type="password" id="aiApiKeyInput" class="text-input" placeholder="sk-ant-...">
         </div>
         <div class="btn-row">
@@ -499,7 +508,7 @@
 
 </div>
 
-<script src="audio.js?v=30"></script>
-<script src="app.js?v=30"></script>
+<script src="audio.js?v=31"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>

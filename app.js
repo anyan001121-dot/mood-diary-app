@@ -571,14 +571,31 @@
   document.getElementById('safetyFlowCloseBtn').addEventListener('click', closeSafetyFlow);
   document.getElementById('safetyFlowBackdrop').addEventListener('click', closeSafetyFlow);
 
-  // ---------- 小萤：花园里的小伙伴（BYOK：用户自己的 API Key，直连 Anthropic，不经过我们的服务器） ----------
+  // ---------- 小萤：花园里的小伙伴（BYOK：用户自己的 API Key，直连服务商，不经过我们的服务器） ----------
   // 架构上刻意选这条路：静态站点没有后端，任何我们自己的 API Key 放进前端都会被扒走；
-  // 让用户用自己的 Key 直接从浏览器调用 Anthropic（官方支持的 anthropic-dangerous-direct-browser-access
-  // 头），我们完全看不到 Key 也看不到对话内容，"数据不上传到我们的服务器"这句承诺不受影响。
+  // 让用户用自己的 Key 直接从浏览器调用服务商的 API，我们完全看不到 Key 也看不到对话内容，
+  // "数据不上传到我们的服务器"这句承诺不受影响。
+  // 服务商不只 Anthropic 一家——逐个用 curl 实测过 CORS 预检响应，只留下真的能直连成功的：
+  // Anthropic（官方专门开放的 anthropic-dangerous-direct-browser-access 头）、DeepSeek、
+  // 智谱 GLM、通义千问（阿里云百炼兼容模式），这几家的 API 都会在预检响应里正常回
+  // access-control-allow-origin。OpenAI 官方明确不开放浏览器直连（会被拦在 CDN 层），
+  // 所以没有放进来——放一个用不了的选项比不放更糟。
   // "小萤"只是一个更自然的呈现方式（花园里的一只萤火虫，而不是一个生硬的"AI聊天"功能入口），
   // 设置页和隐私说明里始终清楚写着它的话是 AI 生成的，不是刻意隐瞒。
   const AI_SETTINGS_KEY = 'moodDiary.aiSettings.v1';
   const AI_CHAT_MODEL = 'claude-haiku-4-5-20251001';
+  const AI_PROVIDERS = {
+    anthropic: { label: 'Anthropic（Claude）', keyPlaceholder: 'sk-ant-...' },
+    deepseek: { label: 'DeepSeek', keyPlaceholder: 'sk-...' },
+    zhipu: { label: '智谱 GLM', keyPlaceholder: 'API Key' },
+    qwen: { label: '通义千问（阿里云百炼）', keyPlaceholder: 'sk-...' },
+  };
+  // DeepSeek / 智谱 / 通义千问都是 OpenAI 兼容的 chat/completions 格式，共用一套请求逻辑
+  const OPENAI_COMPAT_PROVIDERS = {
+    deepseek: { url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' },
+    zhipu: { url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4-flash' },
+    qwen: { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-turbo' },
+  };
   const AI_CHAT_SYSTEM_PROMPT = [
     '你是"小萤"，一只住在用户情绪花园里的小萤火虫，性格温和、有耐心，说话自然、口语化，像朋友一样。',
     '- 只做共情式的陪伴和倾听，不诊断任何心理或精神状态，不给医疗或药物建议，不自称心理咨询师、治疗师或AI',
@@ -589,8 +606,8 @@
   ].join('\n');
 
   function loadAiSettings() {
-    try { return JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) || { enabled: false, apiKey: '' }; }
-    catch (e) { return { enabled: false, apiKey: '' }; }
+    try { return JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) || { enabled: false, provider: 'anthropic', apiKey: '' }; }
+    catch (e) { return { enabled: false, provider: 'anthropic', apiKey: '' }; }
   }
   function saveAiSettings(settings) {
     localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
@@ -600,9 +617,14 @@
     const settings = loadAiSettings();
     const statusEl = document.getElementById('aiKeyStatus');
     const openBtn = document.getElementById('aiOpenChatBtn');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const keyInput = document.getElementById('aiApiKeyInput');
     if (!statusEl || !openBtn) return;
+    const provider = settings.provider || 'anthropic';
+    if (providerSelect) providerSelect.value = provider;
+    if (keyInput) keyInput.placeholder = (AI_PROVIDERS[provider] || AI_PROVIDERS.anthropic).keyPlaceholder;
     if (settings.enabled && settings.apiKey) {
-      statusEl.textContent = '小萤醒着，随时可以聊';
+      statusEl.textContent = `小萤醒着（${(AI_PROVIDERS[provider] || AI_PROVIDERS.anthropic).label}），随时可以聊`;
       openBtn.disabled = false;
     } else {
       statusEl.textContent = '小萤还在睡觉';
@@ -610,16 +632,22 @@
     }
   }
 
+  document.getElementById('aiProviderSelect').addEventListener('change', (e) => {
+    const keyInput = document.getElementById('aiApiKeyInput');
+    keyInput.placeholder = (AI_PROVIDERS[e.target.value] || AI_PROVIDERS.anthropic).keyPlaceholder;
+  });
   document.getElementById('aiSaveKeyBtn').addEventListener('click', () => {
     const input = document.getElementById('aiApiKeyInput');
     const key = input.value.trim();
     if (!key) return;
-    saveAiSettings({ enabled: true, apiKey: key });
+    const provider = document.getElementById('aiProviderSelect').value;
+    saveAiSettings({ enabled: true, provider, apiKey: key });
     input.value = '';
     renderAiSettingsUI();
   });
   document.getElementById('aiClearKeyBtn').addEventListener('click', () => {
-    saveAiSettings({ enabled: false, apiKey: '' });
+    const provider = document.getElementById('aiProviderSelect').value;
+    saveAiSettings({ enabled: false, provider, apiKey: '' });
     document.getElementById('aiApiKeyInput').value = '';
     renderAiSettingsUI();
   });
@@ -658,26 +686,49 @@
     appendAiChatMessage('assistant', '我是小萤，一直在你的花园里飞。想说什么，我都在听。');
   }
 
-  async function callClaude(messages) {
+  async function callFirefly(messages) {
     const settings = loadAiSettings();
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const provider = settings.provider || 'anthropic';
+
+    if (provider === 'anthropic') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: AI_CHAT_MODEL,
+          max_tokens: 300,
+          system: AI_CHAT_SYSTEM_PROMPT,
+          messages,
+        }),
+      });
+      if (!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      return (data.content && data.content[0] && data.content[0].text) || '（没有收到回复）';
+    }
+
+    // DeepSeek / 智谱 GLM / 通义千问：都是 OpenAI 兼容格式
+    const cfg = OPENAI_COMPAT_PROVIDERS[provider];
+    if (!cfg) throw new Error('未知的服务商: ' + provider);
+    const res = await fetch(cfg.url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
+        'authorization': 'Bearer ' + settings.apiKey,
       },
       body: JSON.stringify({
-        model: AI_CHAT_MODEL,
+        model: cfg.model,
         max_tokens: 300,
-        system: AI_CHAT_SYSTEM_PROMPT,
-        messages,
+        messages: [{ role: 'system', content: AI_CHAT_SYSTEM_PROMPT }, ...messages],
       }),
     });
     if (!res.ok) throw new Error('API error ' + res.status);
     const data = await res.json();
-    return (data.content && data.content[0] && data.content[0].text) || '（没有收到回复）';
+    return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '（没有收到回复）';
   }
 
   async function sendAiChatMessage() {
@@ -707,7 +758,7 @@
     const placeholderEl = appendAiChatMessage('assistant', '……');
 
     try {
-      const reply = await callClaude(aiChatHistory);
+      const reply = await callFirefly(aiChatHistory);
       placeholderEl.textContent = reply;
       aiChatHistory.push({ role: 'assistant', content: reply });
       // 第二道防线：万一 AI 自己的措辞里出现了风险表达，同样触发安全引导。
