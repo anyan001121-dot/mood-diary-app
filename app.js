@@ -1401,7 +1401,18 @@
   let careFlowEntryId = null;
   let careFlowMood = null;
   let careFlowTrigger = null;
+  let careFlowLastAction = null;
   const careFlowTimers = [];
+
+  // Care Memory：只看"上次同类情况下，哪个行动之后用户说了好一点"，
+  // 不比较次数多少、不下"这个方法对你有效"这种结论，只用来生成一句轻量提示
+  function getCareMemoryHint(reasonKey) {
+    if (!reasonKey) return null;
+    const log = loadCareLog()
+      .filter(e => e.kind === 'microcare' && e.trigger === reasonKey && e.action && e.feedback === 'better')
+      .sort((a, b) => b.ts - a.ts);
+    return log.length ? log[0].action : null;
+  }
 
   function clearCareFlowTimers() {
     careFlowTimers.forEach(t => clearTimeout(t));
@@ -1526,8 +1537,15 @@
     const secondaryHtml = cfg.secondary
       ? `<button type="button" class="btn btn-ghost btn-block" data-cf="${cfg.secondary.action}" data-prompt="${cfg.secondary.notePrompt || ''}" data-message="${cfg.secondary.message || ''}">${cfg.secondary.label}</button>`
       : '';
+    const bestAction = getCareMemoryHint(reasonKey);
+    const memoryLabel = bestAction === cfg.primary.action ? cfg.primary.label
+      : (cfg.secondary && bestAction === cfg.secondary.action ? cfg.secondary.label : null);
+    const memoryHtml = memoryLabel
+      ? `<p class="cf-memory-hint">上次遇到类似的事，「${memoryLabel}」好像对你有一点帮助，今天要不要还是先试试这个？</p>`
+      : '';
     setCareFlowBody(`
       <p class="cf-lead">${cfg.lead}</p>
+      ${memoryHtml}
       <div class="cf-actions">
         <button type="button" class="btn btn-primary btn-block" data-cf="${cfg.primary.action}" data-prompt="${cfg.primary.notePrompt || ''}" data-message="${cfg.primary.message || ''}">${cfg.primary.label}</button>
         ${secondaryHtml}
@@ -1565,6 +1583,7 @@
   }
 
   function showCareFlowBreathing() {
+    careFlowLastAction = 'breathing';
     setCareFlowBody(`
       <div class="cf-orb-wrap">
         <div class="cf-orb"></div>
@@ -1595,7 +1614,7 @@
   }
 
   function showCareFlowFeedbackResponse(value) {
-    addCareLogEntry({ id: uid(), ts: Date.now(), kind: 'microcare', tier: careFlowMood, trigger: careFlowTrigger, feedback: value });
+    addCareLogEntry({ id: uid(), ts: Date.now(), kind: 'microcare', tier: careFlowMood, trigger: careFlowTrigger, action: careFlowLastAction, feedback: value });
     if (value === 'better') {
       setCareFlowBody(`
         <p class="cf-lead">那就停在这里也很好。\n不用因为好了一点，就马上继续努力。</p>
@@ -1653,8 +1672,11 @@
       if (checkSafetyRisk(val)) {
         closeCareFlow();
         showSafetyFlow();
+      } else if (val) {
+        careFlowLastAction = 'note';
+        showCareFlowFeedback();
       } else {
-        showCareFlowAcknowledge('写下来了。谢谢你愿意花这一点时间陪自己。');
+        showCareFlowAcknowledge('先不写了也没关系。');
       }
       return;
     }
