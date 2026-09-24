@@ -720,6 +720,87 @@
     return `${moodDesc}${trendDesc}${tagDesc}。`;
   }
 
+  // 每日花园事件：进入花园时，有一定概率发生一件轻量的小事——不是签到奖励，
+  // 也不需要用户做任何事才能"赢"，只是让每天打开花园这件事多一点不确定性。
+  const GARDEN_EVENTS = [
+    { id: 'butterfly', icon: '🦋', message: '今天来了一只蝴蝶。', detail: '', notePrompt: '今天有什么事情，让你觉得轻松了一点？', actionLabel: '说说看', action: 'note' },
+    { id: 'rain', icon: '🌧️', message: '花园今天下雨了。', detail: '有些日子不用开花，喝一点水也很好。', action: 'none' },
+    { id: 'snail', icon: '🐌', message: '草地上出现一只小蜗牛。', detail: '今天要不要慢一点？', actionLabel: '陪我慢下来', action: 'breathing' },
+    { id: 'sprout', icon: '🌱', message: '发现一株陌生的嫩芽。', detail: '再记录几次，看看它会长成什么样子。', action: 'none' },
+  ];
+  const GARDEN_EVENT_KEY = 'moodDiary.gardenEvent.v1';
+  const GARDEN_EVENT_CHANCE = 0.45;
+
+  function loadGardenEventState() {
+    try { return JSON.parse(localStorage.getItem(GARDEN_EVENT_KEY)) || null; } catch (e) { return null; }
+  }
+  function saveGardenEventState(state) {
+    localStorage.setItem(GARDEN_EVENT_KEY, JSON.stringify(state));
+  }
+  function rollGardenEvent() {
+    const today = dayKey(Date.now());
+    let state = loadGardenEventState();
+    if (state && state.date === today) return state;
+    state = { date: today, eventId: null, dismissed: false };
+    if (Math.random() < GARDEN_EVENT_CHANCE) {
+      state.eventId = GARDEN_EVENTS[Math.floor(Math.random() * GARDEN_EVENTS.length)].id;
+    }
+    saveGardenEventState(state);
+    return state;
+  }
+
+  function renderGardenEvent(isCurrentPlot) {
+    const card = document.getElementById('gardenEvent');
+    const state = rollGardenEvent();
+    const event = isCurrentPlot && state.eventId && !state.dismissed
+      ? GARDEN_EVENTS.find(e => e.id === state.eventId)
+      : null;
+    if (!event) { card.hidden = true; return; }
+    document.getElementById('gardenEventIcon').textContent = event.icon;
+    document.getElementById('gardenEventMessage').textContent = event.message;
+    document.getElementById('gardenEventDetail').textContent = event.detail || '';
+    document.getElementById('gardenEventDetail').hidden = !event.detail;
+    const actionBtn = document.getElementById('gardenEventActionBtn');
+    if (event.action !== 'none') {
+      actionBtn.textContent = event.actionLabel;
+      actionBtn.hidden = false;
+      actionBtn.dataset.eventId = event.id;
+    } else {
+      actionBtn.hidden = true;
+    }
+    card.hidden = false;
+  }
+
+  function dismissGardenEvent() {
+    const state = loadGardenEventState();
+    if (state) {
+      state.dismissed = true;
+      saveGardenEventState(state);
+    }
+    document.getElementById('gardenEvent').hidden = true;
+  }
+  document.getElementById('gardenEventDismissBtn').addEventListener('click', dismissGardenEvent);
+  document.getElementById('gardenEventActionBtn').addEventListener('click', (e) => {
+    const eventId = e.currentTarget.dataset.eventId;
+    const event = GARDEN_EVENTS.find(ev => ev.id === eventId);
+    dismissGardenEvent();
+    if (!event) return;
+    if (event.action === 'note') {
+      const entries = loadEntries().slice().sort((a, b) => b.ts - a.ts);
+      const todayEntry = entries.find(x => dayKey(x.ts) === dayKey(Date.now()));
+      if (todayEntry) {
+        openEntryEditor(todayEntry.id);
+        showCheckinStep(3);
+        document.getElementById('checkinNoteQuestion').textContent = event.notePrompt;
+        document.getElementById('note').placeholder = event.notePrompt;
+      }
+    } else if (event.action === 'breathing') {
+      showView('care');
+      document.getElementById('breathingCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!breathRunning) startBreathing();
+    }
+  });
+
   function renderGarden() {
     const entries = loadEntries().slice().sort((a, b) => a.ts - b.ts);
     const total = entries.length;
@@ -750,6 +831,7 @@
     document.getElementById('gardenPrompt').textContent = !isCurrentPlot
       ? '正在回顾这片花园，点右边的箭头回到今天'
       : (hasToday ? '今天已经和你一起记录过啦，想再聊聊现在的心情吗？' : '嗨，这一刻的你，感觉怎么样？点一下就好');
+    renderGardenEvent(isCurrentPlot);
 
     const summaryEl = document.getElementById('gardenPlotSummary');
     if (plotEntries.length === GARDEN_MILESTONE) {

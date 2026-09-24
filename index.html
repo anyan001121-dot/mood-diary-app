@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -67,6 +67,18 @@
         </div>
 
         <div class="garden-prompt" id="gardenPrompt">嗨，这一刻的你，感觉怎么样？点一下就好</div>
+
+        <div class="garden-event" id="gardenEvent" hidden>
+          <div class="garden-event-row">
+            <span class="garden-event-icon" id="gardenEventIcon"></span>
+            <div class="garden-event-text">
+              <p id="gardenEventMessage"></p>
+              <p class="muted small" id="gardenEventDetail"></p>
+            </div>
+            <button type="button" class="garden-event-close" id="gardenEventDismissBtn">✕</button>
+          </div>
+          <button type="button" class="garden-event-action" id="gardenEventActionBtn" hidden></button>
+        </div>
 
         <div class="garden-progress" id="gardenProgress">
           <div class="garden-plot-nav-row">
@@ -403,7 +415,7 @@
 
 </div>
 
-<script src="audio.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="audio.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

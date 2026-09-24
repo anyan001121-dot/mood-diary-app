@@ -392,6 +392,48 @@ main {
   padding: 12px 12px 0;
 }
 
+/* 每日花园事件：轻量的、不打卡不强制的随机小惊喜 */
+.garden-event {
+  margin: 10px 14px 0;
+  background: var(--accent-soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.garden-event-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.garden-event-icon { font-size: 22px; line-height: 1; }
+.garden-event-text { flex: 1; min-width: 0; }
+.garden-event-text p { margin: 0; }
+.garden-event-text p:first-child { font-size: 13.5px; color: var(--text); font-weight: 600; }
+.garden-event-text p.muted { margin-top: 2px; }
+.garden-event-close {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-family: inherit;
+}
+.garden-event-action {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .garden-empty-hint {
   margin: auto 4% 10px;
   text-align: center;
