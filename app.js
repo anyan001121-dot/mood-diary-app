@@ -17,10 +17,118 @@
     2: ['assets/flower-low-1.png', 'assets/flower-low-2.png'],
     1: ['assets/flower-awful-1.png', 'assets/flower-awful-2.png'],
   };
+
+  // 情绪植物图鉴 v1：强度>=4（盛开阶段）时，不再只看心情档位选花，
+  // 还会结合当次记录的第一个关联因素，长出对应的"品种"——每个心情档位有
+  // 一个默认品种（matchTag: null）和若干因素专属品种。素材目前用现有花朵
+  // 做色相/明度变体，先把"品种系统"整体搭起来，以后可以逐步换成真实手绘素材。
+  const PLANT_SPECIES = [
+    { id: 'coral-tulip', name: '珊瑚郁金香', mood: 5, matchTag: null, asset: 'assets/flower-great-bloom.png', desc: '很好的日子里，最常陪着你的那一朵。' },
+    { id: 'sunflower', name: '向日葵', mood: 5, matchTag: '健康', asset: 'assets/species-sunflower.png', desc: '身体状态也很好的日子，会开出这样热烈的花。' },
+    { id: 'warm-tulip', name: '暖阳郁金香', mood: 5, matchTag: '社交媒体', asset: 'assets/species-warm-tulip.png', desc: '和朋友们热闹连接在一起时，长出的金色郁金香。' },
+    { id: 'peach-tulip', name: '蜜桃郁金香', mood: 4, matchTag: null, asset: 'assets/flower-good-bloom.png', desc: '不错的日子里，最常见的那一朵。' },
+    { id: 'pink-tulip', name: '粉色郁金香', mood: 4, matchTag: '人际关系', asset: 'assets/species-pink-tulip.png', desc: '和人之间温柔的联系，会长出粉色的郁金香。' },
+    { id: 'sage-sprout', name: '鼠尾草嫩芽', mood: 3, matchTag: null, asset: 'assets/flower-okay-half.png', desc: '普普通通的日子，也在悄悄生长。' },
+    { id: 'mist-sage', name: '晨雾鼠尾草', mood: 3, matchTag: '天气', asset: 'assets/species-mist-sage.png', desc: '阴天或雨天，也会长出这样安静的颜色。' },
+    { id: 'bluebell-mist', name: '雾蓝铃兰', mood: 2, matchTag: null, asset: 'assets/flower-low-2.png', desc: '低落的日子，也会长出自己的花。' },
+    { id: 'moonflower', name: '月光花', mood: 2, matchTag: '睡眠', asset: 'assets/species-moonflower.png', desc: '没睡好的低落时刻，会开出这样安静发白的花。' },
+    { id: 'bluebell', name: '蓝铃花', mood: 2, matchTag: '工作学业', asset: 'assets/species-bluebell.png', desc: '工作压得喘不过气的低落里，长出的深蓝色小花。' },
+    { id: 'night-rose', name: '深夜玫瑰', mood: 1, matchTag: null, asset: 'assets/flower-awful-1.png', desc: '很糟的时刻，也被好好地留在了这里。' },
+    { id: 'rain-bud', name: '雨夜蓓蕾', mood: 1, matchTag: '睡眠', asset: 'assets/flower-awful-2.png', desc: '疲惫到极点的夜晚，蜷缩成的一朵花苞。' },
+    { id: 'lavender-night', name: '静夜薰衣草', mood: 1, matchTag: '独处', asset: 'assets/species-lavender-night.png', desc: '一个人很难熬的时刻，也开出了深紫色的花。' },
+  ];
+
+  function resolveSpecies(entry) {
+    const tierSpecies = PLANT_SPECIES.filter(s => s.mood === entry.mood);
+    const tags = entry.tags || [];
+    const specific = tierSpecies.find(s => s.matchTag && tags.includes(s.matchTag));
+    return specific || tierSpecies.find(s => !s.matchTag) || null;
+  }
+
   function spriteFor(entry) {
     const stage = entry.intensity >= 4 ? 1 : 0;
+    if (stage === 1) {
+      const species = resolveSpecies(entry);
+      if (species) return species.asset;
+    }
     return MOOD_SPRITES[entry.mood][stage];
   }
+
+  const SEEN_SPECIES_KEY = 'moodDiary.seenSpecies.v1';
+  function loadSeenSpecies() {
+    try { return JSON.parse(localStorage.getItem(SEEN_SPECIES_KEY)) || []; } catch (e) { return []; }
+  }
+  function markSpeciesSeen(id) {
+    const seen = loadSeenSpecies();
+    if (!seen.includes(id)) {
+      seen.push(id);
+      localStorage.setItem(SEEN_SPECIES_KEY, JSON.stringify(seen));
+    }
+  }
+  function computeDiscoveredSpecies() {
+    const set = new Set();
+    loadEntries().filter(e => e.intensity >= 4).forEach(e => {
+      const sp = resolveSpecies(e);
+      if (sp) set.add(sp.id);
+    });
+    return set;
+  }
+
+  // 发现新品种的庆祝时刻：只在第一次长出某个品种时出现一次，之后同一品种
+  // 再次出现不会重复打扰——这是一种轻量的、不会破坏治愈感的变量奖励。
+  function showSpeciesDiscovery(species) {
+    document.getElementById('speciesDiscoverImg').src = species.asset;
+    document.getElementById('speciesDiscoverName').textContent = species.name;
+    document.getElementById('speciesDiscoverDesc').textContent = species.desc;
+    const backdrop = document.getElementById('speciesBackdrop');
+    const card = document.getElementById('speciesDiscoverCard');
+    backdrop.hidden = false;
+    card.hidden = false;
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      card.classList.add('show');
+    });
+  }
+  function closeSpeciesDiscovery() {
+    document.getElementById('speciesBackdrop').classList.remove('show');
+    document.getElementById('speciesDiscoverCard').classList.remove('show');
+    setTimeout(() => {
+      document.getElementById('speciesBackdrop').hidden = true;
+      document.getElementById('speciesDiscoverCard').hidden = true;
+    }, 300);
+  }
+  function checkSpeciesDiscovery(entry) {
+    if (entry.intensity < 4) return;
+    const species = resolveSpecies(entry);
+    if (!species) return;
+    if (loadSeenSpecies().includes(species.id)) return;
+    markSpeciesSeen(species.id);
+    showSpeciesDiscovery(species);
+  }
+  document.getElementById('speciesDiscoverCloseBtn').addEventListener('click', closeSpeciesDiscovery);
+  document.getElementById('speciesDiscoverViewBtn').addEventListener('click', () => {
+    closeSpeciesDiscovery();
+    showView('species');
+  });
+  document.getElementById('speciesBackdrop').addEventListener('click', closeSpeciesDiscovery);
+
+  function renderSpeciesGuide() {
+    const discovered = computeDiscoveredSpecies();
+    document.getElementById('speciesProgressText').textContent = `已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
+    document.getElementById('speciesGrid').innerHTML = PLANT_SPECIES.map(sp => {
+      if (discovered.has(sp.id)) {
+        return `<div class="species-cell found">
+          <img src="${sp.asset}" alt="${sp.name}">
+          <div class="species-cell-name">${sp.name}</div>
+        </div>`;
+      }
+      return `<div class="species-cell locked">
+        <div class="species-cell-silhouette">?</div>
+        <div class="species-cell-name">${MOOD_META[sp.mood].label}的日子里</div>
+      </div>`;
+    }).join('');
+  }
+
   let editingEntryId = null;
   let lastQuickEntryId = null;
 
@@ -124,18 +232,22 @@
   }
 
   // ---------- navigation ----------
-  const views = ['home', 'log', 'insight', 'care', 'history'];
+  const views = ['home', 'log', 'insight', 'care', 'history', 'species'];
   function showView(name) {
     views.forEach(v => {
       document.getElementById('view-' + v).classList.toggle('active', v === name);
     });
-    document.querySelectorAll('.tab-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.nav === name);
-    });
+    // 植物图鉴是花园的子页面，不在底部导航里，切过去时保留"花园"的高亮状态
+    if (name !== 'species') {
+      document.querySelectorAll('.tab-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.nav === name);
+      });
+    }
     if (name === 'home') renderHome();
     if (name === 'insight') renderInsight();
     if (name === 'care') renderCare();
     if (name === 'history') renderHistory();
+    if (name === 'species') renderSpeciesGuide();
     window.scrollTo(0, 0);
   }
   document.addEventListener('click', (e) => {
@@ -290,6 +402,7 @@
     setTimeout(() => { confirmEl.hidden = true; }, 2200);
 
     showView('home');
+    checkSpeciesDiscovery(fields);
   }
 
   document.getElementById('saveEntryBtn').addEventListener('click', saveCheckinEntry);
@@ -524,6 +637,11 @@
       : '今天还没有记录心情，来看看你的花园吧';
 
     renderGarden();
+    const speciesLink = document.getElementById('speciesLinkText');
+    if (speciesLink) {
+      const discovered = computeDiscoveredSpecies();
+      speciesLink.textContent = `🌿 植物图鉴 · 已发现 ${discovered.size}/${PLANT_SPECIES.length} 种`;
+    }
     const days7 = dailyAverages(7);
 
     // 这是情绪关怀产品，不是打卡类应用："连续 X 天"这种一断就归零的计数，

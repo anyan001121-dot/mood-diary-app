@@ -7,7 +7,7 @@
 <meta name="description" content="零门槛记录情绪变化，发现情绪关联，获取冥想、音乐、运动等自助调节建议。数据只存在你的浏览器里。">
 <link rel="icon" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/favicon.png">
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -94,6 +94,11 @@
           </div>
         </div>
       </div>
+
+      <button type="button" class="species-link" id="speciesLinkBtn" data-nav="species">
+        <span id="speciesLinkText">🌿 植物图鉴 · 已发现 0/13 种</span>
+        <span class="species-link-arrow">›</span>
+      </button>
 
       <div class="card delayed-checkin-card" id="delayedCheckinCard" hidden>
         <h3 id="delayedCheckinGreeting">下午好</h3>
@@ -349,6 +354,19 @@
       </div>
     </section>
 
+    <!-- ============ 情绪植物图鉴 ============ -->
+    <section class="view" id="view-species">
+      <div class="card">
+        <div class="card-title-row">
+          <h2 style="margin:0">植物图鉴</h2>
+          <button class="btn-ghost" data-nav="home" style="border:none;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer">返回花园</button>
+        </div>
+        <p class="muted small" id="speciesProgressText">已发现 0/13 种</p>
+        <p class="muted small">强度比较高的记录，会结合当时的关联因素长出不同的品种——同一种心情，也可能开出不一样的花。</p>
+        <div class="species-grid" id="speciesGrid"></div>
+      </div>
+    </section>
+
   </main>
 
   <nav class="tabbar">
@@ -372,9 +390,20 @@
 
   <div class="toast" id="flowerToast" hidden></div>
 
+  <!-- 发现新植物品种的庆祝时刻 -->
+  <div class="bottom-sheet-backdrop" id="speciesBackdrop" hidden></div>
+  <div class="species-discover-card" id="speciesDiscoverCard" hidden>
+    <p class="species-discover-eyebrow">发现新植物</p>
+    <img class="species-discover-img" id="speciesDiscoverImg" src="" alt="">
+    <h3 id="speciesDiscoverName"></h3>
+    <p class="muted small" id="speciesDiscoverDesc"></p>
+    <button class="btn btn-primary btn-block" id="speciesDiscoverViewBtn">看看图鉴</button>
+    <button type="button" class="care-plan-skip" id="speciesDiscoverCloseBtn">先收下</button>
+  </div>
+
 </div>
 
-<script src="audio.js?v=21"></script>
-<script src="app.js?v=21"></script>
+<script src="audio.js?v=22"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

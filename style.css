@@ -1187,3 +1187,83 @@ textarea, .text-input {
   text-overflow: ellipsis;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 植物图鉴入口 + 图鉴网格 */
+.species-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+.species-link:active { background: var(--accent-soft); }
+.species-link-arrow { color: var(--text-muted); font-size: 18px; }
+
+.species-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.species-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border-radius: 14px;
+  padding: 12px 6px;
+  text-align: center;
+}
+.species-cell img { width: 52px; height: 52px; object-fit: contain; }
+.species-cell-name { font-size: 12px; color: var(--text); font-weight: 600; }
+.species-cell.locked { opacity: 0.55; }
+.species-cell-silhouette {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--card-bg);
+  font-weight: 700;
+}
+.species-cell.locked .species-cell-name { font-weight: 400; color: var(--text-muted); }
+
+/* 发现新品种的庆祝卡片 */
+.species-discover-card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  width: min(320px, calc(100% - 48px));
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(.34,1.4,.64,1);
+  z-index: 71;
+}
+.species-discover-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.species-discover-eyebrow {
+  font-size: 12px;
+  color: var(--accent-deep);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+}
+.species-discover-img { width: 84px; height: 84px; object-fit: contain; margin-bottom: 10px; }
+.species-discover-card h3 { margin: 0 0 8px; font-size: 19px; }
+.species-discover-card p.muted { margin: 0 0 18px; }
