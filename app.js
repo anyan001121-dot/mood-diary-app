@@ -1369,7 +1369,7 @@
   const CF_RESPONSES = {
     '工作学业': {
       lead: '最近是不是被事情压得有点满？\n现在不用把整个问题解决。我们只找下一件最小的事情。',
-      primary: { label: '帮我把事情拆小', action: 'note', notePrompt: '下一步，最小的一件事是什么？' },
+      primary: { label: '帮我把事情拆小', action: 'note', notePrompt: '下一件最小的事情是什么？' },
       secondary: { label: '我现在只想休息', action: 'breathing' },
     },
     '人际关系': {
